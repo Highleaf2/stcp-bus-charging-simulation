@@ -3,8 +3,8 @@
 # Implements simple charging logic that connects buses to available chargers
 
 import asyncio
-from charging_station_simulator import ChargingStationSimulator
-from electric_bus_simulator import ElectricBusSimulator
+from backup_old.charging_station_simulator import ChargingStationSimulator
+from backup_old.electric_bus_simulator import ElectricBusSimulator
 import config
 
 # Global dictionaries to store simulator instances
