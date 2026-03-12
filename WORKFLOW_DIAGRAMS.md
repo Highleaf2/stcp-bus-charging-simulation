@@ -73,6 +73,7 @@ graph TB
     end
     
     style A fill:#4CAF50
+    style CS fill:#4CAF50
     style B fill:#2196F3
     style D fill:#FF9800
     style E fill:#9C27B0
