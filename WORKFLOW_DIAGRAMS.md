@@ -19,7 +19,7 @@ graph TB
         A --> A1 & A2 & A3 & A4
     end
 ```
-    
+```mermaid   
     subgraph "CLOUD - AZURE IoT CENTRAL"
         B[IoT Central<br/>Device Provisioning]
         B --> C[Data Export]
