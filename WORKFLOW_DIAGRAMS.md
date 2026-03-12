@@ -55,7 +55,7 @@ graph TB
     X --> Y
     V --> Y
     Y --> Z[Enviar Telemetria]
-    Z --> A
+
     
     style A fill:#4CAF50
     style B fill:#2196F3
