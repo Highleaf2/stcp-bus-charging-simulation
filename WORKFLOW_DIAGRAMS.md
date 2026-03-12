@@ -1,21 +1,24 @@
 ## 1. Pipeline Completo do Sistema
 
-## 1. Pipeline Completo do Sistema
-
 Fluxo end-to-end desde sensores até decisões:
 ```mermaid
-graph TB
-    A[Sensores Autocarro] --> A1[Bateria kWh/Level]
+graph LR
+    subgraph SENSORES["SENSORES E TELEMETRIA"]
+        A[Sensores<br/>Autocarro]
+        CS[Sensores<br/>Estações]
+    end
+    
+    A --> A1[Bateria kWh/Level]
     A --> A2[Temperatura C]
     A --> A3[GPS Lat/Long]
-    A --> A4[Estado PARKED/CHARGING/ROUTE]
+    A --> A4[Estado]
     
-    CS[Sensores Estações] --> CS1[Temperatura Carregador]
-    CS --> CS2[Potência Atual kW]
-    CS --> CS3[Energia Entregue kWh]
-    CS --> CS4[Estado IDLE/CHARGING]
+    CS --> CS1[Temp Carregador]
+    CS --> CS2[Potência kW]
+    CS --> CS3[Energia kWh]
+    CS --> CS4[Estado]
     
-    A1 --> B[IoT Central Device Provisioning]
+    A1 --> B
     A2 --> B
     A3 --> B
     A4 --> B
@@ -24,44 +27,44 @@ graph TB
     CS3 --> B
     CS4 --> B
     
-    B --> C[Data Export]
-    C --> D[Event Hub Kafka Protocol]
-    D --> D1[Partition 1 stcp-telemetry]
-    
-    D1 --> E[Spark Streaming]
+    B[IoT Central] --> C[Data Export]
+    C --> D[Event Hub]
+    D --> E[Spark Streaming]
     E --> F[Parse JSON]
-    F --> G{Tipo Dispositivo?}
-    G -->|BUS-*| H[Bus Telemetry]
-    G -->|CS-*| I[Charger Telemetry]
-    H --> J[(Delta Table bus_telemetry)]
-    I --> K[(Delta Table charger_telemetry)]
+    F --> G{Tipo?}
     
-    J --> M[Ler Estado Atual]
+    G -->|BUS| H[Bus Telemetry]
+    G -->|CS| I[Charger Telemetry]
+    
+    H --> J[(Delta Table<br/>bus_telemetry)]
+    I --> K[(Delta Table<br/>charger_telemetry)]
+    
+    J --> M[Ler Estado]
     K --> M
-    M --> N[Calcular Score de Urgência]
+    M --> N[Calcular Score]
     
     N --> O{Score >= 70?}
-    O -->|Sim URGENTE| P[Prioridade Máxima]
+    O -->|Sim| P[Prioridade Max]
     O -->|Não| Q{Score >= 50?}
     Q -->|Sim| R[Prioridade Alta]
     Q -->|Não| S[Prioridade Normal]
     
-    P --> T{Bateria Suficiente?}
+    P --> T{Bateria OK?}
     R --> T
     S --> T
     
-    T -->|Não| U{Estação Disponível?}
-    T -->|Sim| V[READY Pronto para rota]
+    T -->|Não| U{Estação Livre?}
+    T -->|Sim| V[READY]
     
-    U -->|Sim| W[START_CHARGING Conectar estação]
-    U -->|Não| X[WAIT Fila de espera]
+    U -->|Sim| W[START_CHARGING]
+    U -->|Não| X[WAIT]
     
-    W --> Y[Atualizar Estado]
+    W --> Y[Atualizar]
     X --> Y
     V --> Y
     
-    Y --> ZB[Enviar Telemetria Autocarros]
-    Y --> ZC[Enviar Telemetria Estações]
+    Y --> ZB[Telemetria Autocarros]
+    Y --> ZC[Telemetria Estações]
     ZB --> A
     ZC --> CS
     
