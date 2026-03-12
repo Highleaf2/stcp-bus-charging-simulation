@@ -7,7 +7,6 @@ Sistema de Otimização de Carregamento de Autocarros Elétricos
 ## 1. Pipeline Completo do Sistema
 
 Fluxo end-to-end desde sensores até decisões:
-
 ```mermaid
 graph TB
     subgraph "SENSORES E SIMULADORES"
@@ -18,8 +17,7 @@ graph TB
         A4[Estado PARKED/CHARGING/ROUTE]
         A --> A1 & A2 & A3 & A4
     end
-```
-```mermaid   
+    
     subgraph "CLOUD - AZURE IoT CENTRAL"
         B[IoT Central<br/>Device Provisioning]
         B --> C[Data Export]
@@ -71,8 +69,6 @@ graph TB
     style E fill:#9C27B0
     style L fill:#F44336
 ```
-
----
 
 ## 2. Algoritmo de Decisão (Detalhado)
 
