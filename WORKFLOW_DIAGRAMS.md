@@ -18,7 +18,15 @@ graph TB
         A4[Estado PARKED/CHARGING/ROUTE]
         A --> A1 & A2 & A3 & A4
     end
-    
+
+    subgraph "SENSORES ESTAÇÂO"
+    CS[Sensores Estações] --> CS1[Temperatura Carregador]
+    CS --> CS2[Potência Atual kW]
+    CS --> CS3[Energia Entregue kWh]
+    CS --> CS4[Estado IDLE/CHARGING]
+
+    end
+
     subgraph "CLOUD - AZURE IoT CENTRAL"
         B[IoT Central<br/>Device Provisioning]
         B --> C[Data Export]
