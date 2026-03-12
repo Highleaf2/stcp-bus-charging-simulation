@@ -2,23 +2,21 @@
 
 Fluxo end-to-end desde sensores até decisões:
 ```mermaid
-graph LR
-    subgraph SENSORES["SENSORES E TELEMETRIA"]
-        A[Sensores<br/>Autocarro]
-        CS[Sensores<br/>Estações]
-    end
+graph TB
+    A[Sensores Autocarro]
+    CS[Sensores Estações]
     
     A --> A1[Bateria kWh/Level]
     A --> A2[Temperatura C]
     A --> A3[GPS Lat/Long]
-    A --> A4[Estado]
+    A --> A4[Estado PARKED/CHARGING/ROUTE]
     
-    CS --> CS1[Temp Carregador]
-    CS --> CS2[Potência kW]
-    CS --> CS3[Energia kWh]
-    CS --> CS4[Estado]
+    CS --> CS1[Temperatura Carregador]
+    CS --> CS2[Potência Atual kW]
+    CS --> CS3[Energia Entregue kWh]
+    CS --> CS4[Estado IDLE/CHARGING]
     
-    A1 --> B
+    A1 --> B[IoT Central Device Provisioning]
     A2 --> B
     A3 --> B
     A4 --> B
@@ -27,44 +25,42 @@ graph LR
     CS3 --> B
     CS4 --> B
     
-    B[IoT Central] --> C[Data Export]
-    C --> D[Event Hub]
+    B --> C[Data Export]
+    C --> D[Event Hub Kafka Protocol]
     D --> E[Spark Streaming]
     E --> F[Parse JSON]
-    F --> G{Tipo?}
+    F --> G{Tipo Dispositivo?}
+    G -->|BUS-*| H[Bus Telemetry]
+    G -->|CS-*| I[Charger Telemetry]
+    H --> J[(Delta Table bus_telemetry)]
+    I --> K[(Delta Table charger_telemetry)]
     
-    G -->|BUS| H[Bus Telemetry]
-    G -->|CS| I[Charger Telemetry]
-    
-    H --> J[(Delta Table<br/>bus_telemetry)]
-    I --> K[(Delta Table<br/>charger_telemetry)]
-    
-    J --> M[Ler Estado]
+    J --> M[Ler Estado Atual]
     K --> M
-    M --> N[Calcular Score]
+    M --> N[Calcular Score de Urgência]
     
     N --> O{Score >= 70?}
-    O -->|Sim| P[Prioridade Max]
+    O -->|Sim| P[Prioridade Máxima]
     O -->|Não| Q{Score >= 50?}
     Q -->|Sim| R[Prioridade Alta]
     Q -->|Não| S[Prioridade Normal]
     
-    P --> T{Bateria OK?}
+    P --> T{Bateria Suficiente?}
     R --> T
     S --> T
     
-    T -->|Não| U{Estação Livre?}
+    T -->|Não| U{Estação Disponível?}
     T -->|Sim| V[READY]
     
     U -->|Sim| W[START_CHARGING]
     U -->|Não| X[WAIT]
     
-    W --> Y[Atualizar]
+    W --> Y[Atualizar Estado]
     X --> Y
     V --> Y
     
-    Y --> ZB[Telemetria Autocarros]
-    Y --> ZC[Telemetria Estações]
+    Y --> ZB[Enviar Telemetria Autocarros]
+    Y --> ZC[Enviar Telemetria Estações]
     ZB --> A
     ZC --> CS
     
