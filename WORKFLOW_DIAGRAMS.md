@@ -1,5 +1,7 @@
 ## 1. Pipeline Completo do Sistema
 
+## 1. Pipeline Completo do Sistema
+
 Fluxo end-to-end desde sensores até decisões:
 ```mermaid
 graph TB
@@ -57,9 +59,11 @@ graph TB
     W --> Y[Atualizar Estado]
     X --> Y
     V --> Y
-    Y --> Z[Enviar Telemetria Atualizada]
-    Z --> A
-    Z --> CS
+    
+    Y --> ZB[Enviar Telemetria Autocarros]
+    Y --> ZC[Enviar Telemetria Estações]
+    ZB --> A
+    ZC --> CS
     
     style A fill:#4CAF50
     style CS fill:#4CAF50
