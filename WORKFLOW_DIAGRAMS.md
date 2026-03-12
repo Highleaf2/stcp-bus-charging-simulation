@@ -1,73 +1,60 @@
-## 1. Pipeline Completo do Sistema
-
-Fluxo end-to-end desde sensores até decisões:
-```mermaid
 graph TB
-    A[Sensores Autocarro]
-    CS[Sensores Estações]
+    subgraph "SENSORES E SIMULADORES"
+        A[Sensores Autocarro]
+        A1[Bateria kWh/Level]
+        A2[Temperatura C]
+        A3[GPS Lat/Long]
+        A4[Estado PARKED/CHARGING/ROUTE]
+        A --> A1 & A2 & A3 & A4
+    end
     
-    A --> A1[Bateria kWh/Level]
-    A --> A2[Temperatura C]
-    A --> A3[GPS Lat/Long]
-    A --> A4[Estado PARKED/CHARGING/ROUTE]
+    subgraph "CLOUD - AZURE IoT CENTRAL"
+        B[IoT Central<br/>Device Provisioning]
+        B --> C[Data Export]
+    end
     
-    CS --> CS1[Temperatura Carregador]
-    CS --> CS2[Potência Atual kW]
-    CS --> CS3[Energia Entregue kWh]
-    CS --> CS4[Estado IDLE/CHARGING]
+    subgraph "STREAMING - EVENT HUB"
+        C --> D[Event Hub<br/>Kafka Protocol]
+        D --> D1[Partition 1<br/>stcp-telemetry]
+    end
     
-    A1 --> B[IoT Central Device Provisioning]
-    A2 --> B
-    A3 --> B
-    A4 --> B
-    CS1 --> B
-    CS2 --> B
-    CS3 --> B
-    CS4 --> B
+    subgraph "PROCESSAMENTO - DATABRICKS"
+        D1 --> E[Spark Streaming]
+        E --> F[Parse JSON]
+        F --> G{Tipo Dispositivo?}
+        G -->|BUS-*| H[Bus Telemetry]
+        G -->|CS-*| I[Charger Telemetry]
+        H --> J[(Delta Table<br/>bus_telemetry)]
+        I --> K[(Delta Table<br/>charger_telemetry)]
+    end
     
-    B --> C[Data Export]
-    C --> D[Event Hub Kafka Protocol]
-    D --> E[Spark Streaming]
-    E --> F[Parse JSON]
-    F --> G{Tipo Dispositivo?}
-    G -->|BUS-*| H[Bus Telemetry]
-    G -->|CS-*| I[Charger Telemetry]
-    H --> J[(Delta Table bus_telemetry)]
-    I --> K[(Delta Table charger_telemetry)]
+    subgraph "OTIMIZAÇÃO - ALGORITMO"
+        L[Charging Scheduler]
+        M[Ler Estado Atual]
+        N[Calcular Score de Urgência]
+        
+        M --> N
+        J -.Consulta.-> M
+        K -.Consulta.-> M
+        
+        N --> O{Score >= 70?}
+        O -->|Sim URGENTE| P[Prioridade Máxima]
+        O -->|Não| Q{Score >= 50?}
+        Q -->|Sim| R[Prioridade Alta]
+        Q -->|Não| S[Prioridade Normal]
+    end
     
-    J --> M[Ler Estado Atual]
-    K --> M
-    M --> N[Calcular Score de Urgência]
-    
-    N --> O{Score >= 70?}
-    O -->|Sim| P[Prioridade Máxima]
-    O -->|Não| Q{Score >= 50?}
-    Q -->|Sim| R[Prioridade Alta]
-    Q -->|Não| S[Prioridade Normal]
-    
-    P --> T{Bateria Suficiente?}
-    R --> T
-    S --> T
-    
-    T -->|Não| U{Estação Disponível?}
-    T -->|Sim| V[READY]
-    
-    U -->|Sim| W[START_CHARGING]
-    U -->|Não| X[WAIT]
-    
-    W --> Y[Atualizar Estado]
-    X --> Y
-    V --> Y
-    
-    Y --> ZB[Enviar Telemetria Autocarros]
-    Y --> ZC[Enviar Telemetria Estações]
-    ZB --> A
-    ZC --> CS
+    subgraph "DECISÕES"
+        P & R & S --> T{Bateria<br/>Suficiente?}
+        T -->|Não| U{Estação<br/>Disponível?}
+        T -->|Sim| V[READY<br/>Pronto para rota]
+        
+        U -->|Sim| W[START_CHARGING<br/>Conectar estação]
+        U -->|Não| X[WAIT<br/>Fila de espera]
+    end
     
     style A fill:#4CAF50
-    style CS fill:#4CAF50
     style B fill:#2196F3
     style D fill:#FF9800
     style E fill:#9C27B0
-    style N fill:#F44336
-```
+    style L fill:#F44336
