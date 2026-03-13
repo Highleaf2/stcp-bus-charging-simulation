@@ -4,6 +4,7 @@ Projeto de simulação realista do sistema de carregamento de autocarros elétri
 
 ---
 
+<<<<<<< HEAD
 ## 13.03.2026
 
 
@@ -11,6 +12,11 @@ Projeto de simulação realista do sistema de carregamento de autocarros elétri
 
 
 ## Versões
+=======
+## Versões + Data
+
+## v1
+>>>>>>> f875cd35308bc7fc2e27cf92cef2bf6adae7c4fb
 
 ### **v1-basic** - Simulador Básico
 Simulador genérico com algoritmo de otimização baseado em prioridades.
@@ -25,19 +31,6 @@ Simulador genérico com algoritmo de otimização baseado em prioridades.
 
 ---
 
-### **v2-gtfs-real** - Cenário GTFS Real ATUAL
-Simulação com rotas reais do STCP Porto usando dados GTFS.
-
-📂 [Ver documentação](./v2-gtfs-real/README.md)
-
-**Características:**
-- Rotas reais (200, 201, 202)
-- Paragens reais com GPS
-- Estado inicial configurável
-- Movimento paragem a paragem
-- Algoritmo de otimização
-
----
 
 ## Executar
 
