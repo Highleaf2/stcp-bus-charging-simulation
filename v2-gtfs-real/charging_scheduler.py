@@ -8,7 +8,7 @@ Decide quando e onde cada autocarro deve carregar baseado em:
 """
 
 from datetime import datetime
-import routes_config as routes
+import gtfs_routes as routes
 
 class ChargingScheduler:
     """

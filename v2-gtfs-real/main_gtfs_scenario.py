@@ -128,7 +128,7 @@ class GTFSSimulationCoordinator:
         print("="*80)
         for charger_id in CHARGER_IDS:
             charger = self.chargers[charger_id]
-            print(f"[{charger_id}] {charger.state} | Potência: {charger.current_power:.1f} kW")
+            print(f"[{charger_id}] {charger.state} | Potência: {charger.current_power_kw:.1f} kW")
         print("="*80 + "\n")
     
     def _execute_optimization(self):
@@ -221,7 +221,7 @@ class GTFSSimulationCoordinator:
                 
                 # Atualizar estações
                 for charger_id in CHARGER_IDS:
-                    self.chargers[charger_id].update(UPDATE_INTERVAL_SECONDS)
+                    self.chargers[charger_id].update()
                 
                 # Enviar telemetria
                 for bus_id in BUS_IDS:
