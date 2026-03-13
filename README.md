@@ -4,6 +4,12 @@ Projeto de simulação realista do sistema de carregamento de autocarros elétri
 
 ---
 
+## 13.03.2026
+
+
+
+
+
 ## Versões
 
 ### **v1-basic** - Simulador Básico
