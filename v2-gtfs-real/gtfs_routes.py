@@ -168,3 +168,60 @@ def get_remaining_distance(route, current_stop_sequence):
 def get_stops_remaining(route, current_stop_sequence):
     """Calcular número de paragens restantes"""
     return route["total_stops"] - current_stop_sequence
+
+# Configuração para o algoritmo de otimização
+OPTIMIZATION_CONFIG = {
+    "min_battery_buffer_percent": 10,
+    "charging_urgency_threshold_minutes": 60,
+    "max_charging_sessions_simultaneous": 3,
+    "preferred_charge_time_before_departure_minutes": 120
+}
+
+# Prioridades das rotas GTFS
+ROUTE_PRIORITIES = {
+    "200": "Alta",      # Rota 200: Bolhão - Castelo Queijo
+    "201": "Normal",    # Rota 201: Aliados - Viso
+    "202": "Critica"    # Rota 202: Aliados - Passeio Alegre (mais curta)
+}
+
+PRIORITY_LEVELS = {
+    "Critica": 4,
+    "Alta": 3,
+    "Normal": 2,
+    "Baixa": 1
+}
+
+def get_route_for_bus(bus_id):
+    """Obter informação da rota atribuída"""
+    initial_state = INITIAL_BUS_STATE.get(bus_id)
+    if initial_state:
+        route = initial_state["route"]
+        return {
+            "route_id": route["route_id"],
+            "description": route["route_long_name"],
+            "priority": ROUTE_PRIORITIES.get(route["route_id"], "Normal"),
+            "departure_time": route["stops"][0]["departure_time"],
+            "required_battery_percent": 20.0,  # Percentagem mínima necessária
+            "distance_km": route["total_distance_km"]
+        }
+    return None
+
+def get_priority_level(priority_name):
+    """Converter nome de prioridade em nível numérico"""
+    return PRIORITY_LEVELS.get(priority_name, 0)
+
+def calculate_time_to_departure(current_time, departure_time_str):
+    """Calcular minutos até hora de partida"""
+    from datetime import datetime, timedelta
+    hour, minute = map(int, departure_time_str.split(":"))
+    departure = current_time.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if departure < current_time:
+        departure += timedelta(days=1)
+    delta = departure - current_time
+    return delta.total_seconds() / 60
+
+def is_battery_sufficient_for_route(battery_percent, route_info):
+    """Verificar se bateria é suficiente"""
+    required_percent = route_info["required_battery_percent"]
+    buffer = OPTIMIZATION_CONFIG["min_battery_buffer_percent"]
+    return battery_percent >= (required_percent + buffer)
