@@ -41,11 +41,11 @@ Todas no depósito STCP:
 ### **1. Simulação de Movimento**
 
 Os autocarros:
-- ✅ Seguem rotas GTFS reais paragem a paragem
-- ✅ Velocidade realista (20-40 km/h)
-- ✅ Param em cada paragem (10-20s)
-- ✅ Atualizam GPS em tempo real
-- ✅ Consomem bateria (1.5 kWh/km)
+- Seguem rotas GTFS reais paragem a paragem
+- Velocidade realista (20-40 km/h)
+- Param em cada paragem (10-20s)
+- Atualizam GPS em tempo real
+- Consomem bateria (1.5 kWh/km)
 
 ### **2. Estados Possíveis**
 
@@ -83,13 +83,13 @@ Carregar até bateria suficiente
 ### **Passo 1: Verificar Ficheiros**
 
 Tens os ficheiros necessários?
-- ✅ `gtfs_routes.py`
-- ✅ `bus_simulator_gtfs.py`
-- ✅ `main_gtfs_scenario.py`
-- ✅ `charger_simulator.py` (do sistema anterior)
-- ✅ `charging_scheduler.py` (do sistema anterior)
-- ✅ `config.py` (do sistema anterior)
-- ✅ `.env` (credenciais Azure)
+- `gtfs_routes.py`
+- `bus_simulator_gtfs.py`
+- `main_gtfs_scenario.py`
+- `charger_simulator.py` (do sistema anterior)
+- `charging_scheduler.py` (do sistema anterior)
+- `config.py` (do sistema anterior)
+- `.env` (credenciais Azure)
 
 ### **Passo 2: Executar**
 
