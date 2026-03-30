@@ -13,14 +13,7 @@ class ChargingStationSimulator:
         self.primary_key = primary_key
         self.client = None
         
-        self.status = "available"
         self.max_power = 120.0
-        self.current_power = 0.0
-        self.charger_temperature = 22.0
-        self.energy_delivered = 0.0
-        self.current_efficiency = 92.0
-        self.connected_bus_id = None
-        self.charging_start_time = None
         self.cost_per_kwh = 0.15
 
         station_coords = {
@@ -30,6 +23,54 @@ class ChargingStationSimulator:
         }
         self.latitude = station_coords.get(device_id, {}).get("latitude", 41.152661)
         self.longitude = station_coords.get(device_id, {}).get("longitude", -8.579658)
+
+        # Configuracao inicial de cada estacao
+        # CS-001: a carregar BUS-004 (autocarro ficticio para simular estacao ocupada)
+        # CS-002: com avaria (estado fault)
+        # CS-003: disponivel
+        station_config = {
+            "CS-001": {
+                "status": "occupied",
+                "current_power": 80.0,
+                "connected_bus_id": "BUS-004",
+                "charger_temperature": 35.0,
+                "energy_delivered": 12.5,
+                "current_efficiency": 92.0
+            },
+            "CS-002": {
+                "status": "fault",
+                "current_power": 0.0,
+                "connected_bus_id": None,
+                "charger_temperature": 28.0,
+                "energy_delivered": 0.0,
+                "current_efficiency": 0.0
+            },
+            "CS-003": {
+                "status": "available",
+                "current_power": 0.0,
+                "connected_bus_id": None,
+                "charger_temperature": 22.0,
+                "energy_delivered": 0.0,
+                "current_efficiency": 92.0
+            }
+        }
+
+        config = station_config.get(device_id, {
+            "status": "available",
+            "current_power": 0.0,
+            "connected_bus_id": None,
+            "charger_temperature": 22.0,
+            "energy_delivered": 0.0,
+            "current_efficiency": 92.0
+        })
+
+        self.status = config["status"]
+        self.current_power = config["current_power"]
+        self.connected_bus_id = config["connected_bus_id"]
+        self.charger_temperature = config["charger_temperature"]
+        self.energy_delivered = config["energy_delivered"]
+        self.current_efficiency = config["current_efficiency"]
+        self.charging_start_time = datetime.utcnow().isoformat() if self.status == "occupied" else None
 
     async def provision_device(self):
         provisioning_client = ProvisioningDeviceClient.create_from_symmetric_key(
@@ -50,7 +91,7 @@ class ChargingStationSimulator:
             conn_str = f"HostName={assigned_hub};DeviceId={self.device_id};SharedAccessKey={self.primary_key}"
             self.client = IoTHubDeviceClient.create_from_connection_string(conn_str)
             await self.client.connect()
-            print(f"Connected: {self.device_id}")
+            print(f"Connected: {self.device_id} ({self.status})")
             await self.update_properties()
         except Exception as e:
             print(f"Error connecting {self.device_id}: {e}")
@@ -62,9 +103,7 @@ class ChargingStationSimulator:
             "maxPower": self.max_power,
             "connectedBusId": self.connected_bus_id,
             "chargingStartTime": self.charging_start_time,
-            "costPerKwh": self.cost_per_kwh,
-            "latitude": self.latitude,
-            "longitude": self.longitude
+            "costPerKwh": self.cost_per_kwh
         }
         try:
             await self.client.patch_twin_reported_properties(properties)
@@ -78,7 +117,9 @@ class ChargingStationSimulator:
             "energyDelivered": round(self.energy_delivered, 2),
             "currentEfficiency": round(self.current_efficiency, 2),
             "state": self.status,
-            "connectedBus": self.connected_bus_id
+            "connectedBus": self.connected_bus_id,
+            "latitude": self.latitude,
+            "longitude": self.longitude
         }
         message = Message(json.dumps(telemetry))
         message.content_type = "application/json"
@@ -90,15 +131,24 @@ class ChargingStationSimulator:
     
     def update_state(self):
         if self.status == "occupied" and self.connected_bus_id:
+            # Estacao a carregar: temperatura sobe, energia acumula
             self.charger_temperature = min(45.0, self.charger_temperature + random.uniform(0.05, 0.15))
             energy_per_second = self.current_power / 3600
-            self.energy_delivered += energy_per_second
+            self.energy_delivered += energy_per_second * 5
             self.current_efficiency = 92.0 + random.uniform(-1.0, 1.0)
+
         elif self.status == "available":
+            # Estacao livre: temperatura desce para ambiente
             self.current_power = 0.0
             self.charger_temperature = max(22.0, self.charger_temperature - random.uniform(0.02, 0.08))
             self.current_efficiency = 92.0
-    
+
+        elif self.status == "fault":
+            # Estacao com avaria: sem potencia, temperatura ligeiramente elevada
+            self.current_power = 0.0
+            self.current_efficiency = 0.0
+            self.charger_temperature = max(28.0, self.charger_temperature + random.uniform(-0.05, 0.05))
+
     async def start_charging(self, bus_id, power_allocation):
         self.status = "occupied"
         self.connected_bus_id = bus_id
