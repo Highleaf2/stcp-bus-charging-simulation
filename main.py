@@ -71,7 +71,7 @@ def main():
         return
     
     try:
-        asyncio.run(asyncio.wait_for(run_all_simulators(), timeout=60))
+        asyncio.run(run_all_simulators())
     except asyncio.TimeoutError:
         print("\nSimulacao terminada apos 60 segundos")
     except KeyboardInterrupt:

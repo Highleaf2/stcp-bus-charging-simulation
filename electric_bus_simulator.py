@@ -25,21 +25,21 @@ class ElectricBusSimulator:
         # BUS-003: a terminar a rota, perto da paragem 16 -> 5313.2 metros percorridos
         bus_config = {
             "BUS-001": {
-                "battery_level": 45.0,
+                "battery_level": 47.3,
                 "status": "inTransit",
                 "distance_traveled": 8098.83,
                 "latitude": 41.157713,
                 "longitude": -8.679766
             },
             "BUS-002": {
-                "battery_level": 70.0,
+                "battery_level": 71.7,
                 "status": "inTransit",
                 "distance_traveled": 696.96,
                 "latitude": 41.151033,
                 "longitude": -8.610854
             },
             "BUS-003": {
-                "battery_level": 25.3,
+                "battery_level": 25.5,
                 "status": "inTransit",
                 "distance_traveled": 5313.2,
                 "latitude": 41.148820,
@@ -139,7 +139,7 @@ class ElectricBusSimulator:
 
         elif self.operational_status == "inTransit":
             # Distancia percorrida por segundo (1 km/s para simulacao acelerada)
-            distance_per_second = 0.05
+            distance_per_second = 2.0
             
             # Actualizar distancia total percorrida na rota em metros
             self.distance_traveled += distance_per_second * 1000
