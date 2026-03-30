@@ -19,24 +19,54 @@ class ElectricBusSimulator:
         self.scheduled_departure = departure_time
         self.avg_consumption = 1.2
 
+        # Configuracao inicial de cada autocarro baseada no Excel (sheet 1_Config_Autocarros)
+        # BUS-001: faltam 5 paragens de 30, esta na paragem 25 -> 8098.83 metros percorridos
+        # BUS-002: esta na segunda paragem -> 696.96 metros percorridos
+        # BUS-003: a terminar a rota, perto da paragem 16 -> 5313.2 metros percorridos
         bus_config = {
-            "BUS-001": {"battery_level": 45.0, "status": "inTransit"},
-            "BUS-002": {"battery_level": 70.0, "status": "inTransit"},
-            "BUS-003": {"battery_level": 25.0, "status": "inTransit"}
+            "BUS-001": {
+                "battery_level": 45.0,
+                "status": "inTransit",
+                "distance_traveled": 8098.83,
+                "latitude": 41.157713,
+                "longitude": -8.679766
+            },
+            "BUS-002": {
+                "battery_level": 70.0,
+                "status": "inTransit",
+                "distance_traveled": 696.96,
+                "latitude": 41.151033,
+                "longitude": -8.610854
+            },
+            "BUS-003": {
+                "battery_level": 25.3,
+                "status": "inTransit",
+                "distance_traveled": 5313.2,
+                "latitude": 41.148820,
+                "longitude": -8.672750
+            }
         }
 
-        config = bus_config.get(device_id, {"battery_level": 50.0, "status": "parked"})
+        config = bus_config.get(device_id, {
+            "battery_level": 50.0,
+            "status": "parked",
+            "distance_traveled": 0.0,
+            "latitude": station_location["latitude"],
+            "longitude": station_location["longitude"]
+        })
+
         self.operational_status = config["status"]
         self.battery_level = config["battery_level"]
         self.battery_kwh = (self.battery_level / 100) * self.battery_capacity
-        self.latitude = station_location["latitude"]
-        self.longitude = station_location["longitude"]
+        self.latitude = config["latitude"]
+        self.longitude = config["longitude"]
+        self.distance_traveled = config["distance_traveled"]
         self.instant_consumption = 0.0
         self.remaining_range = self.battery_kwh / self.avg_consumption
         self.battery_temperature = random.uniform(18, 25)
         self.connected_charger = None
         self.charging_power = 0.0
-        
+
     async def provision_device(self):
         provisioning_client = ProvisioningDeviceClient.create_from_symmetric_key(
             provisioning_host="global.azure-devices-provisioning.net",
@@ -49,19 +79,19 @@ class ElectricBusSimulator:
             return registration_result.registration_state.assigned_hub
         else:
             raise RuntimeError(f"Registration failed: {registration_result.status}")
-    
+
     async def connect(self):
         try:
             assigned_hub = await self.provision_device()
             conn_str = f"HostName={assigned_hub};DeviceId={self.device_id};SharedAccessKey={self.primary_key}"
             self.client = IoTHubDeviceClient.create_from_connection_string(conn_str)
             await self.client.connect()
-            print(f"Connected: {self.device_id}")
+            print(f"Connected: {self.device_id} ({self.operational_status})")
             await self.update_properties()
         except Exception as e:
             print(f"Error connecting {self.device_id}: {e}")
             raise
-    
+
     async def update_properties(self):
         properties = {
             "batteryCapacity": self.battery_capacity,
@@ -75,7 +105,7 @@ class ElectricBusSimulator:
             await self.client.patch_twin_reported_properties(properties)
         except Exception as e:
             print(f"Error updating properties: {e}")
-    
+
     async def send_telemetry(self):
         telemetry = {
             "batteryLevel": round(self.battery_level, 2),
@@ -85,7 +115,8 @@ class ElectricBusSimulator:
             "batteryTemperature": round(self.battery_temperature, 2),
             "instantConsumption": round(self.instant_consumption, 2),
             "remainingRange": round(self.remaining_range, 2),
-            "state": self.operational_status
+            "state": self.operational_status,
+            "distanceTraveled": round(self.distance_traveled, 2)
         }
         message = Message(json.dumps(telemetry))
         message.content_type = "application/json"
@@ -94,7 +125,7 @@ class ElectricBusSimulator:
             await self.client.send_message(message)
         except Exception as e:
             print(f"Error sending telemetry: {e}")
-    
+
     def update_state(self):
         if self.operational_status == "charging":
             if self.battery_level < 95:
@@ -105,17 +136,26 @@ class ElectricBusSimulator:
                 self.instant_consumption = -self.charging_power
             else:
                 self.instant_consumption = 0.0
-                
+
         elif self.operational_status == "inTransit":
-            distance_per_second = 15
+            # Distancia percorrida por segundo (1 km/s para simulacao acelerada)
+            distance_per_second = 0.05
+            
+            # Actualizar distancia total percorrida na rota em metros
+            self.distance_traveled += distance_per_second * 1000
+
+            # Consumo de energia baseado na distancia percorrida
             energy_consumed = distance_per_second * self.avg_consumption / 3600
             self.battery_kwh = max(0, self.battery_kwh - energy_consumed)
             self.battery_level = (self.battery_kwh / self.battery_capacity) * 100
             self.instant_consumption = self.avg_consumption * 50
             self.battery_temperature = min(35.0, self.battery_temperature + random.uniform(0.02, 0.05))
-            self.latitude += random.uniform(-0.001, 0.001)
-            self.longitude += random.uniform(-0.001, 0.001)
-            
+
+            # Movimento GPS baseado na direccao da rota
+            # O GPS move-se gradualmente na direccao da paragem seguinte
+            self.latitude += random.uniform(-0.0005, 0.0005)
+            self.longitude += random.uniform(-0.0005, 0.0005)
+
         elif self.operational_status == "parked":
             self.battery_kwh = max(0, self.battery_kwh - 0.0001)
             self.battery_level = (self.battery_kwh / self.battery_capacity) * 100
@@ -126,26 +166,26 @@ class ElectricBusSimulator:
             self.remaining_range = self.battery_kwh / self.avg_consumption
         else:
             self.remaining_range = 0
-    
+
     async def start_charging(self, charger_id, power):
         self.operational_status = "charging"
         self.connected_charger = charger_id
         self.charging_power = power
         await self.update_properties()
         print(f"{self.device_id} started charging at {charger_id} ({power} kW)")
-    
+
     async def stop_charging(self):
         print(f"{self.device_id} stopped charging (battery: {self.battery_level:.1f}%)")
         self.operational_status = "parked"
         self.connected_charger = None
         self.charging_power = 0.0
         await self.update_properties()
-    
+
     async def start_route(self):
         self.operational_status = "inTransit"
         await self.update_properties()
         print(f"{self.device_id} departed for {self.assigned_route}")
-    
+
     async def simulate(self):
         while True:
             try:
@@ -155,7 +195,7 @@ class ElectricBusSimulator:
             except Exception as e:
                 print(f"Error in simulation: {e}")
                 await asyncio.sleep(5)
-    
+
     async def disconnect(self):
         if self.client:
             await self.client.disconnect()

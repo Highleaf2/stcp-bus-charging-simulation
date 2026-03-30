@@ -30,10 +30,11 @@ A arquitectura foi desenhada para simular, na fase académica, o que em produç�
 **Foco actual definido pelo orientador:** queries. Com os dados a chegar ao Databricks em tempo real, o objectivo é conseguir responder a perguntas concretas sobre o estado da frota, como por exemplo:
 - Qual o nível de bateria do autocarro X neste momento?
 - Onde está o autocarro Y (coordenadas GPS)?
+- Em que paragem está o autocarro Z?
+- Quantas paragens faltam para o autocarro terminar a rota?
 - Qual a estação de carregamento disponível?
 - Algum autocarro está abaixo do nível crítico de bateria?
-- Qual autocarro tem a bateria mais baixa?
-- Quais as estações com avaria?
+- Há estações suficientes para todos os autocarros que precisam de carregar?
 
 ---
 
@@ -49,9 +50,9 @@ O sistema funciona em camadas. Cada camada tem uma responsabilidade específica 
 
 Ficheiros: `charging_station_simulator.py`, `electric_bus_simulator.py`, `main.py`, `config.py`
 
-Função: Gerar dados simulados de telemetria (bateria, GPS, temperatura, estado) e enviá-los para o Azure IoT Central usando o protocolo MQTT via DPS (Device Provisioning Service). Cada dispositivo liga-se de forma independente e envia telemetria a cada 5 segundos. O simulador para automaticamente ao fim de 60 segundos usando `asyncio.wait_for`.
+Função: Gerar dados simulados de telemetria e enviá-los para o Azure IoT Central usando o protocolo MQTT via DPS. Cada dispositivo liga-se de forma independente e envia telemetria a cada 5 segundos. O simulador para automaticamente ao fim de 60 segundos usando `asyncio.wait_for`.
 
-Nota importante: No futuro, esta camada será substituída por APIs reais dos autocarros e estações de carregamento da STCP. A arquitectura das camadas seguintes não precisa de ser alterada para isso acontecer.
+Nota importante: No futuro, esta camada será substituída por APIs reais dos autocarros e estações de carregamento da STCP. A arquitectura das camadas seguintes não precisa de ser alterada.
 
 **Camada 2 - Azure IoT Central (Conta Trial)**
 
@@ -76,16 +77,16 @@ Função: Consome o stream de dados do Event Hub em tempo real, faz o parse do J
 
 Foram configurados 3 autocarros no Azure IoT Central:
 
-| ID | Linha | Rota | Hora de Partida | Bateria Inicial | Estado Inicial |
-|---|---|---|---|---|---|
-| BUS-001 | Linha 200 | Bolhão - Castelo do Queijo | 08:30 | 45% (157,5 kWh) | inTransit |
-| BUS-002 | Linha 201 | Aliados - Viso | 09:00 | 70% (245 kWh) | inTransit |
-| BUS-003 | Linha 202 | Aliados - Passeio Alegre | 07:45 | 25,3% (88,55 kWh) | inTransit |
+| ID | Linha | Rota | Hora de Partida | Bateria Inicial | Estado Inicial | Distância Inicial (m) |
+|---|---|---|---|---|---|---|
+| BUS-001 | Linha 200 | Bolhão - Castelo do Queijo | 08:30 | 45% (157,5 kWh) | inTransit | 8098,83 |
+| BUS-002 | Linha 201 | Aliados - Viso | 09:00 | 70% (245 kWh) | inTransit | 696,96 |
+| BUS-003 | Linha 202 | Aliados - Passeio Alegre | 07:45 | 25,3% (88,55 kWh) | inTransit | 5313,20 |
 
-Os estados e níveis de bateria iniciais foram definidos com base na folha de configuração do ficheiro Excel do projecto, que descreve um cenário realista de operação:
-- BUS-001: ainda em rota, faltam 5 paragens
-- BUS-002: ainda em rota, na segunda paragem
-- BUS-003: a terminar a rota, bateria baixa
+Os estados, níveis de bateria e distâncias iniciais foram definidos com base na folha de configuração do ficheiro Excel do projecto:
+- BUS-001: faltam 5 paragens de 30, está na paragem 25 (8098,83 metros percorridos)
+- BUS-002: está na segunda paragem (696,96 metros percorridos)
+- BUS-003: a terminar a rota, perto da última paragem (5313,20 metros percorridos)
 
 **Especificações técnicas (baseadas no CaetanoBus e.City Gold):**
 
@@ -109,6 +110,7 @@ Os estados e níveis de bateria iniciais foram definidos com base na folha de co
 | instantConsumption | Double (kW) | Consumo instantâneo de energia |
 | remainingRange | Double (km) | Autonomia restante estimada |
 | state | Texto | Estado operacional actual |
+| distanceTraveled | Double (metros) | Distância percorrida na rota actual |
 
 **Estados possíveis de um autocarro:**
 
@@ -120,7 +122,7 @@ Os estados e níveis de bateria iniciais foram definidos com base na folha de co
 
 ### 3.2 Estações de Carregamento
 
-Foram configuradas 3 estações de carregamento com estados distintos para simular um cenário realista de operação:
+Foram configuradas 3 estações com estados distintos para simular um cenário realista:
 
 | ID | Estado Inicial | Descrição | Latitude | Longitude |
 |---|---|---|---|---|
@@ -161,47 +163,41 @@ O BUS-004 é um autocarro fictício usado apenas para simular uma estação ocup
 
 ### 4.1 Arranque
 
-Quando se executa `python main.py`, o programa cria 6 instâncias de dispositivos (3 autocarros + 3 estações) e liga cada uma ao Azure IoT Central de forma independente e em paralelo usando `asyncio`. A ligação é feita via DPS, que autentica cada dispositivo pela sua chave primária.
-
-O simulador para automaticamente ao fim de 60 segundos. Este valor pode ser alterado no parâmetro `timeout` da função `main()`.
+Quando se executa `python main.py`, o programa cria 6 instâncias de dispositivos e liga cada uma ao Azure IoT Central em paralelo usando `asyncio`. O simulador para automaticamente ao fim de 60 segundos.
 
 ### 4.2 Comportamento dos Autocarros
 
 **Quando está em rota (estado inTransit):**
 
-A bateria desce continuamente. O cálculo assume uma velocidade simulada de 5 km por segundo e um consumo de 1,2 kWh/km. As coordenadas GPS mudam ligeiramente a cada leitura com uma variação aleatória para simular movimento. A temperatura da bateria sobe gradualmente até um máximo de 35 graus Celsius.
+A bateria desce continuamente com base na distância percorrida. O campo `distanceTraveled` aumenta 50 metros por segundo (0,05 km/s). A cada segundo, o autocarro consome energia proporcional à distância percorrida com base no consumo médio de 1,2 kWh/km. As coordenadas GPS mudam ligeiramente a cada leitura. A temperatura da bateria sobe gradualmente até um máximo de 35 graus Celsius.
 
-Nota: O simulador não segue as paragens reais do GTFS. O movimento é contínuo e as coordenadas mudam de forma aproximada. A integração com os horários e paragens reais das linhas 200, 201 e 202 está prevista para uma fase posterior.
+Nota: O GPS é aproximado e não segue as coordenadas exactas das paragens GTFS. A paragem actual é determinada pelo campo `distanceTraveled` em comparação com a tabela `route_stops` no Databricks.
 
 **Quando está a carregar (estado charging):**
 
-A bateria sobe ao ritmo da potência alocada, com uma eficiência de 92%. O carregamento para automaticamente aos 95%.
+A bateria sobe ao ritmo da potência alocada com eficiência de 92%. Para automaticamente aos 95%.
 
 **Quando está estacionado (estado parked):**
 
-Há uma auto-descarga muito pequena que simula o consumo dos sistemas eléctricos em repouso.
+Auto-descarga muito pequena que simula o consumo dos sistemas em repouso.
 
-### 4.3 Comportamento das Estações de Carregamento
+### 4.3 Comportamento das Estações
 
-**Estado occupied (CS-001):**
+**Estado occupied (CS-001):** Temperatura sobe até máximo de 45 graus Celsius, energia acumula, eficiência varia em torno dos 92%.
 
-A temperatura sobe gradualmente até um máximo de 45 graus Celsius. A energia acumulada na sessão aumenta a cada leitura. A eficiência varia ligeiramente em torno dos 92%.
+**Estado fault (CS-002):** Sem potência, eficiência a zero, temperatura mantém-se ligeiramente elevada.
 
-**Estado fault (CS-002):**
+**Estado available (CS-003):** Sem potência, temperatura desce para 22 graus Celsius.
 
-Sem potência entregue, eficiência a zero, temperatura mantém-se ligeiramente elevada (28 graus Celsius) como resultado da avaria.
+### 4.4 Tabela de Referência das Paragens
 
-**Estado available (CS-003):**
+Foi criada no Databricks uma tabela Delta estática chamada `route_stops` com os horários e coordenadas reais das paragens das três linhas, obtidos dos dados GTFS da STCP:
 
-Sem potência entregue. A temperatura desce lentamente para a temperatura ambiente de 22 graus Celsius.
+- Linha 200 (BUS-001): 30 paragens, Bolhão até Castelo do Queijo, 9853,9 metros
+- Linha 201 (BUS-002): 26 paragens, Aliados até Viso, 9777,63 metros
+- Linha 202 (BUS-003): 16 paragens, S. João de Brito até Passeio Alegre, 5313,2 metros
 
-### 4.4 Valores Iniciais de Bateria
-
-| Autocarro | Bateria Inicial | Estado Inicial | Descrição |
-|---|---|---|---|
-| BUS-001 | 45% (157,5 kWh) | inTransit | Ainda em rota, faltam 5 paragens |
-| BUS-002 | 70% (245 kWh) | inTransit | Em rota, na segunda paragem |
-| BUS-003 | 25,3% (88,55 kWh) | inTransit | A terminar a rota, bateria baixa |
+Esta tabela permite cruzar a distância percorrida em tempo real com as paragens reais para determinar onde cada autocarro está na rota.
 
 ---
 
@@ -209,39 +205,23 @@ Sem potência entregue. A temperatura desce lentamente para a temperatura ambien
 
 ### Fase 1 - Configuração da Infraestrutura Azure
 
-Criação e configuração do Azure IoT Central (plano Trial) com 6 dispositivos e dois device templates: "STCP Electric Bus" e "STCP Charging Station". Criação do Azure Event Hub (plano Student) com namespace `ehns-stcp-bus` e Event Hub `stcp-telemetry`. Configuração da regra de exportação de dados no IoT Central para enviar telemetria para o Event Hub em tempo real.
+Criação do Azure IoT Central (plano Trial) com 6 dispositivos e dois device templates: "STCP Electric Bus" e "STCP Charging Station". Criação do Azure Event Hub (plano Student) com namespace `ehns-stcp-bus` e Event Hub `stcp-telemetry`. Configuração da regra de exportação de dados no IoT Central.
 
 ### Fase 2 - Simulador Python (Versão Inicial)
 
-Criação dos ficheiros `charging_station_simulator.py`, `electric_bus_simulator.py` e `main.py`. Simulador com orquestrador de carregamento automático que ligava os autocarros às estações com base no nível de bateria.
+Criação dos ficheiros `charging_station_simulator.py`, `electric_bus_simulator.py` e `main.py` com orquestrador de carregamento automático.
 
 ### Fase 3 - Notebooks Azure Databricks
 
-Criação de 4 notebooks no Azure Databricks Community Edition:
-
-**Notebook 1 - STCP Dados Simulados:** Ligação ao Event Hub via Kafka, Spark Streaming, parse do JSON, tabelas Delta `bus_telemetry` e `charger_telemetry`.
-
-**Notebook 2 - STCP Business Rules:** 8 regras de negócio como queries SQL.
-
-**Notebook 3 - STCP Algoritmo de Decisão:** Score de urgência para cada autocarro e decisão automática de carregamento.
-
-**Notebook 4 - STCP Simulação de Cenários:** Testes de diferentes cenários.
+Criação de 4 notebooks: STCP Dados Simulados, STCP Business Rules, STCP Algoritmo de Decisão e STCP Simulação de Cenários.
 
 ### Fase 4 - Simplificação por indicação do orientador
 
-O orientador indicou que o foco actual deve ser nas queries. Os notebooks 2, 3 e 4 foram colocados em segundo plano.
+Foco reduzido às queries. Notebooks 2, 3 e 4 colocados em segundo plano.
 
 ### Fase 5 - Correcção da Telemetria (30 de Março de 2026)
 
-Foram identificados e corrigidos vários problemas:
-
-**Campo state a null:** O campo estava a ser enviado como propriedade do dispositivo em vez de telemetria. Solução: adicionado explicitamente ao dicionário de telemetria em ambos os simuladores, e adicionado aos device templates no IoT Central.
-
-**Coordenadas GPS das estações a null:** As estações são fixas, por isso as coordenadas passaram a ser enviadas como telemetria a cada leitura em vez de propriedades do dispositivo. As coordenadas usadas correspondem ao depósito real da STCP na Rua de Bonjóia, Campanhã, Porto.
-
-**Autocarros sempre em parked:** O orquestrador foi removido e os estados iniciais passaram a ser definidos directamente no código com base no cenário do Excel do projecto.
-
-**Intervalo de telemetria:** Alterado de 1 segundo para 5 segundos para reduzir o volume de mensagens.
+Correcção de vários problemas: campo `state` a null (estava como propriedade em vez de telemetria), coordenadas GPS das estações a null (passaram para telemetria), autocarros sempre em `parked` (estados iniciais definidos no código com base no Excel), intervalo de telemetria alterado de 1 para 5 segundos.
 
 ### Fase 6 - Notebook de Queries Operacionais (30 de Março de 2026)
 
@@ -251,27 +231,38 @@ Criação do notebook "STCP Queries" organizado em quatro grupos:
 - Estado actual de todos os autocarros
 - Autocarro com a bateria mais baixa
 - Autocarros em nível crítico (abaixo de 20%)
-- Autonomia restante de cada autocarro (calculada como batteryKwh / 1,2)
+- Autonomia restante de cada autocarro
 - Vista completa de cada autocarro
-- Evolução da bateria do BUS-003 nas últimas 10 leituras
+- Evolução da bateria do BUS-003
 
 **Grupo 2 - Estações de Carregamento:**
 - Estado actual de todas as estações
 - Estações disponíveis para carregamento
 - Estações com avaria
 
-Grupos 3 (Serviços) e 4 (Queries Combinadas) em desenvolvimento.
+**Grupo 3 - Serviços:**
+- Capacidade disponível na rede de carregamento
+- Tempo estimado para carregar cada autocarro até 80%
+- Autocarros que precisam de carregar antes da próxima rota
+- Paragem mais próxima de cada autocarro (baseado em distanceTraveled)
+- Quantas paragens faltam para cada autocarro terminar a rota
 
-Todas as queries usam `ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY event_time DESC)` para garantir que apenas aparece o registo mais recente de cada dispositivo, sem duplicados.
+**Grupo 4 - Queries Combinadas:**
+- Qual o autocarro que está a ser carregado em cada estação
+- Há estações suficientes para os autocarros que precisam de carregar?
+- Custo estimado para carregar todos os autocarros até 80%
+
+Todas as queries usam `ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY event_time DESC)` para garantir que apenas aparece o registo mais recente de cada dispositivo.
 
 ### Fase 7 - Cenário Realista nas Estações (30 de Março de 2026)
 
-As três estações passaram a ter estados distintos para simular um cenário operacional real:
-- CS-001: occupied, a carregar o BUS-004 (autocarro fictício) a 80 kW
-- CS-002: fault, com avaria e fora de serviço
-- CS-003: available, disponível para carregamento
+Estados distintos nas estações: CS-001 occupied (a carregar BUS-004 fictício), CS-002 fault (avaria), CS-003 available. Adicionado timeout de 60 segundos ao simulador.
 
-Adicionado timeout de 60 segundos ao simulador usando `asyncio.wait_for`.
+### Fase 8 - Campo distanceTraveled e Tabela de Paragens (30 de Março de 2026)
+
+Adicionado o campo `distanceTraveled` à telemetria dos autocarros para rastrear a posição na rota com precisão. Os valores iniciais de distância foram definidos com base no estado descrito no Excel do projecto.
+
+Criada a tabela Delta estática `route_stops` no Databricks com os dados reais GTFS das três linhas (72 paragens no total). Esta tabela permite determinar em que paragem está cada autocarro e quantas paragens faltam para terminar a rota, cruzando o `distanceTraveled` em tempo real com as distâncias reais das paragens.
 
 ---
 
@@ -282,30 +273,29 @@ Adicionado timeout de 60 segundos ao simulador usando `asyncio.wait_for`.
 | Azure IoT Central configurado | Concluído |
 | Azure Event Hub configurado | Concluído |
 | Device templates actualizados | Concluído |
-| Simulador Python - telemetria correcta | Concluído |
+| Simulador Python - telemetria completa | Concluído |
+| Simulador Python - campo distanceTraveled | Concluído |
 | Simulador Python - estados realistas nas estações | Concluído |
 | Simulador Python - timeout de 60 segundos | Concluído |
 | Databricks - tabelas Delta a receber dados | Concluído |
+| Databricks - tabela route_stops com dados GTFS | Concluído |
 | Databricks - notebook de queries grupo 1 (Autocarros) | Concluído |
 | Databricks - notebook de queries grupo 2 (Estações) | Concluído |
-| Databricks - notebook de queries grupo 3 (Serviços) | Pendente |
-| Databricks - notebook de queries grupo 4 (Combinadas) | Pendente |
+| Databricks - notebook de queries grupo 3 (Serviços) | Concluído |
+| Databricks - notebook de queries grupo 4 (Combinadas) | Concluído |
 
 ---
 
 ## 7. Passos Seguintes
 
-**Passo 1 - Grupo 3: Queries de Serviço**
+**Passo 1 - Demonstração ao orientador**
 
-Queries que respondem a perguntas operacionais mais complexas, como capacidade disponível na rede, tempo estimado para carregar um autocarro, e previsão de necessidade de carregamento.
+Com o simulador a correr no VS Code e o Databricks aberto, mostrar as queries dos 4 grupos a responder em tempo real.
 
-**Passo 2 - Grupo 4: Queries Combinadas**
+**Passo 2 - Melhorias futuras**
 
-Queries que cruzam dados das duas tabelas, como qual a estação disponível mais próxima de um autocarro com bateria baixa.
-
-**Passo 3 - Demonstração ao orientador**
-
-Com o simulador a correr e o Databricks aberto, mostrar as queries a responder em tempo real.
+- Integração GPS real com as coordenadas das paragens GTFS (mover o autocarro de paragem em paragem em vez de movimento aleatório)
+- Substituição do simulador Python por APIs reais dos autocarros e estações da STCP
 
 ---
 
@@ -333,23 +323,27 @@ Os 6 dispositivos precisam de enviar telemetria em simultâneo. O asyncio permit
 
 **Porquê as coordenadas das estações são enviadas como telemetria e não como propriedades?**
 
-Inicialmente as coordenadas eram enviadas como propriedades do dispositivo. Como as propriedades não são exportadas pelo IoT Central para o Event Hub, as coordenadas chegavam sempre a null no Databricks. A solução foi incluí-las na telemetria, mesmo sendo valores fixos.
+As propriedades do dispositivo não são exportadas pelo IoT Central para o Event Hub, por isso chegavam sempre a null no Databricks. A solução foi incluí-las na telemetria.
 
-**Porquê o simulador usa 5 km por segundo como velocidade simulada?**
+**Porquê o campo distanceTraveled em vez de usar apenas o GPS?**
 
-Com o intervalo de telemetria de 5 segundos e o consumo de 1,2 kWh/km, uma velocidade simulada de 5 km/s produz uma descida de bateria visível entre leituras consecutivas, o que facilita a demonstração das queries em tempo real.
+O GPS simulado é aproximado e não coincide com as coordenadas reais das paragens. O campo `distanceTraveled` acumula a distância percorrida desde o início da rota e permite determinar com precisão em que paragem está o autocarro, cruzando com as distâncias reais das paragens na tabela `route_stops`.
 
-**Porquê o BUS-004 é fictício e não está no IoT Central?**
+**Porquê a tabela route_stops é estática no Databricks e não vem do IoT Central?**
 
-O BUS-004 existe apenas como valor no campo `connectedBus` da CS-001 para simular uma estação ocupada. Criar um dispositivo real no IoT Central para este efeito seria desnecessário e adicionaria complexidade sem benefício para o objectivo actual de demonstrar queries.
+Os horários e paragens são dados de referência fixos que nunca mudam. O Azure IoT Central é para telemetria de dispositivos em tempo real. Guardar dados estáticos no Databricks é a abordagem correcta e permite fazer JOINs eficientes com os dados em tempo real.
 
-**Porquê o orquestrador de carregamento foi removido do main.py?**
+**Porquê o BUS-004 é fictício?**
 
-O foco actual são as queries. O orquestrador adicionava complexidade e provocava mudanças de estado automáticas que dificultavam a demonstração. Os estados são agora definidos directamente no código com base no cenário do Excel.
+O BUS-004 existe apenas como valor no campo `connectedBus` da CS-001 para simular uma estação ocupada. Criar um dispositivo real no IoT Central seria desnecessário para o objectivo actual de demonstrar queries.
 
 **Porquê o timeout de 60 segundos?**
 
-Permite correr o simulador por um período controlado sem necessidade de intervenção manual, útil para demonstrações e testes.
+Permite correr o simulador por um período controlado sem necessidade de intervenção manual, útil para demonstrações.
+
+**Porquê o orquestrador de carregamento foi removido?**
+
+O foco actual são as queries. O orquestrador adicionava complexidade e provocava mudanças de estado automáticas que dificultavam a demonstração. Os estados são definidos directamente no código com base no cenário do Excel.
 
 ---
 
