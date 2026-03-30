@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Azure IoT Central Configuration
 ID_SCOPE = os.getenv("ID_SCOPE", "your-id-scope-here")
 
 CHARGING_STATIONS = {
@@ -43,8 +42,8 @@ ELECTRIC_BUSES = {
 }
 
 STATION_LOCATION = {
-    "latitude": 41.1781,
-    "longitude": -8.6081
+    "latitude": 41.152661,
+    "longitude": -8.579658
 }
 
 TELEMETRY_INTERVAL = 1
