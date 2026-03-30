@@ -107,7 +107,7 @@ class ElectricBusSimulator:
                 self.instant_consumption = 0.0
                 
         elif self.operational_status == "inTransit":
-            distance_per_second = 0.014
+            distance_per_second = 15
             energy_consumed = distance_per_second * self.avg_consumption / 3600
             self.battery_kwh = max(0, self.battery_kwh - energy_consumed)
             self.battery_level = (self.battery_kwh / self.battery_capacity) * 100
