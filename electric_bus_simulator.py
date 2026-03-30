@@ -151,10 +151,10 @@ class ElectricBusSimulator:
             try:
                 self.update_state()
                 await self.send_telemetry()
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
             except Exception as e:
                 print(f"Error in simulation: {e}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
     
     async def disconnect(self):
         if self.client:

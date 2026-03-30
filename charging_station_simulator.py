@@ -62,7 +62,9 @@ class ChargingStationSimulator:
             "maxPower": self.max_power,
             "connectedBusId": self.connected_bus_id,
             "chargingStartTime": self.charging_start_time,
-            "costPerKwh": self.cost_per_kwh
+            "costPerKwh": self.cost_per_kwh,
+            "latitude": self.latitude,
+            "longitude": self.longitude
         }
         try:
             await self.client.patch_twin_reported_properties(properties)
@@ -76,9 +78,7 @@ class ChargingStationSimulator:
             "energyDelivered": round(self.energy_delivered, 2),
             "currentEfficiency": round(self.current_efficiency, 2),
             "state": self.status,
-            "connectedBus": self.connected_bus_id,
-            "latitude": self.latitude,
-            "longitude": self.longitude
+            "connectedBus": self.connected_bus_id
         }
         message = Message(json.dumps(telemetry))
         message.content_type = "application/json"
@@ -120,10 +120,10 @@ class ChargingStationSimulator:
             try:
                 self.update_state()
                 await self.send_telemetry()
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
             except Exception as e:
                 print(f"Error in simulation: {e}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
     
     async def disconnect(self):
         if self.client:
