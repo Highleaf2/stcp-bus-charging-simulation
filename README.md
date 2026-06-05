@@ -50,22 +50,38 @@ O sistema funciona em camadas. Cada camada tem uma responsabilidade específica 
 
 Ficheiros: `charging_station_simulator.py`, `electric_bus_simulator.py`, `main.py`, `config.py`
 
-Função: Gerar dados simulados de telemetria e enviá-los para o Azure IoT Central usando o protocolo MQTT via DPS. Cada dispositivo liga-se de forma independente e envia telemetria a cada 5 segundos. O simulador para automaticamente ao fim de 60 segundos usando `asyncio.wait_for`.
+Função: Gerar dados simulados de telemetria e enviá-los para o Azure IoT Central usando o protocolo MQTT via DPS. Cada dispositivo liga-se de forma independente e envia telemetria a cada 5 segundos.
 
 Nota importante: No futuro, esta camada será substituída por APIs reais dos autocarros e estações de carregamento da STCP. A arquitectura das camadas seguintes não precisa de ser alterada.
 
-**Camada 2 - Azure IoT Central (Conta Trial)**
+**Camada 2 - Azure IoT Central**
+
+Conta: `verbatim9898@proton.me`
+Aplicação: `STCP Bus Charging` (stcp-bus-charging.azureiotcentral.com)
+ID Scope: `0ne011F5C22`
 
 Função: Receber a telemetria de cada dispositivo, gerir a autenticação via DPS, e exportar os dados em tempo real para o Event Hub. Apenas os campos definidos no device template de cada dispositivo são exportados.
 
-**Camada 3 - Azure Event Hub (Conta Student)**
+Nota sobre device templates e devices: Os device templates são moldes que definem os campos de telemetria de cada tipo de dispositivo. Os devices são os dispositivos individuais, cada um com a sua chave de autenticação. São conceitos distintos: sem os templates o IoT Central não sabe que campos esperar; sem os devices o simulador não tem credenciais para se ligar.
+
+**Camada 3 - Azure Event Hub**
 
 Namespace: `ehns-stcp-bus`
 Nome do Event Hub: `stcp-telemetry`
+Tier: Standard (obrigatório para suporte Kafka na porta 9093)
+Resource group: `mrg-dbw-neu-dev-iscap_master_thesis_Eletric_Fleet`
+Conta Azure: `2240115@iscap.ipp.pt`
+Retenção: 1 hora
 
 Função: Actua como fila de mensagens entre o IoT Central e o Databricks. Garante que nenhuma mensagem se perde mesmo que o Databricks esteja temporariamente indisponível.
 
-**Camada 4 - Azure Databricks (Community Edition)**
+**Camada 4 - Azure Databricks**
+
+Workspace: `dbw-stcp-bus`
+Cluster: `stcp-cluster` (Runtime 13.3 LTS, Single Node, termina após 30 minutos de inactividade)
+Resource group: `mrg-dbw-neu-dev-iscap_master_thesis_Eletric_Fleet`
+Conta Azure: `2240115@iscap.ipp.pt`
+Unity Catalog: activo
 
 Função: Consome o stream de dados do Event Hub em tempo real, faz o parse do JSON, separa os dados por tipo de dispositivo, armazena em tabelas Delta permanentes e permite fazer queries SQL sobre os dados actuais e históricos.
 
@@ -75,7 +91,7 @@ Função: Consome o stream de dados do Event Hub em tempo real, faz o parse do J
 
 ### 3.1 Autocarros Eléctricos
 
-Foram configurados 3 autocarros no Azure IoT Central:
+Foram configurados 3 autocarros no Azure IoT Central com o template `STCP_ELECTRIC_BUS`:
 
 | ID | Linha | Rota | Hora de Partida | Bateria Inicial | Estado Inicial | Distância Inicial (m) |
 |---|---|---|---|---|---|---|
@@ -122,7 +138,7 @@ Os estados, níveis de bateria e distâncias iniciais foram definidos com base n
 
 ### 3.2 Estações de Carregamento
 
-Foram configuradas 3 estações com estados distintos para simular um cenário realista:
+Foram configuradas 3 estações com estados distintos para simular um cenário realista, com o template `STCP_CHARGING_STATIONS`:
 
 | ID | Estado Inicial | Descrição | Latitude | Longitude |
 |---|---|---|---|---|
@@ -163,13 +179,15 @@ O BUS-004 é um autocarro fictício usado apenas para simular uma estação ocup
 
 ### 4.1 Arranque
 
-Quando se executa `python main.py`, o programa cria 6 instâncias de dispositivos e liga cada uma ao Azure IoT Central em paralelo usando `asyncio`. O simulador para automaticamente ao fim de 60 segundos.
+Quando se executa `python main.py`, o programa cria 6 instâncias de dispositivos e liga cada uma ao Azure IoT Central em paralelo usando `asyncio`.
 
 ### 4.2 Comportamento dos Autocarros
 
 **Quando está em rota (estado inTransit):**
 
 A bateria desce continuamente com base na distância percorrida. O campo `distanceTraveled` aumenta 50 metros por segundo (0,05 km/s). A cada segundo, o autocarro consome energia proporcional à distância percorrida com base no consumo médio de 1,2 kWh/km. As coordenadas GPS mudam ligeiramente a cada leitura. A temperatura da bateria sobe gradualmente até um máximo de 35 graus Celsius.
+
+Nota: O consumo de bateria está acelerado 10x propositadamente para fins de demonstração, permitindo ver a bateria a descarregar visivelmente durante uma sessão curta.
 
 Nota: O GPS é aproximado e não segue as coordenadas exactas das paragens GTFS. A paragem actual é determinada pelo campo `distanceTraveled` em comparação com a tabela `route_stops` no Databricks.
 
@@ -264,7 +282,7 @@ Adicionado o campo `distanceTraveled` à telemetria dos autocarros para rastrear
 
 Criada a tabela Delta estática `route_stops` no Databricks com os dados reais GTFS das três linhas (72 paragens no total). Esta tabela permite determinar em que paragem está cada autocarro e quantas paragens faltam para terminar a rota, cruzando o `distanceTraveled` em tempo real com as distâncias reais das paragens.
 
-### Fase 9 - Migração para Resource Group BI4ALL (Junho de 2026)
+### Fase 9 - Resource Group BI4ALL recebido (Junho de 2026)
 
 A empresa BI4ALL forneceu um resource group dedicado para o projecto no âmbito do mestrado:
 
@@ -274,9 +292,45 @@ A empresa BI4ALL forneceu um resource group dedicado para o projecto no âmbito 
 - Localização: West Europe
 - Conta Azure: `2240115@iscap.ipp.pt`
 
-O resource group foi recebido vazio. Toda a infraestrutura anterior (IoT Central, Event Hub, Databricks) foi criada em contas pessoais de estudante que entretanto expiraram ou têm limitações. A migração consiste em recriar toda a infraestrutura dentro deste resource group e adaptar os simuladores Python com as novas credenciais.
+### Fase 10 - Migração Completa da Infraestrutura (5 de Junho de 2026)
 
-O trabalho de migração está por iniciar.
+Toda a infraestrutura foi recriada de raiz porque as contas anteriores (Azure for Students e conta Proton) expiraram.
+
+**IoT Central recriado:**
+- Conta: `verbatim9898@proton.me`
+- Aplicação: STCP Bus Charging
+- ID Scope: `0ne011F5C22`
+- Device templates corrigidos e importados via JSON: `STCP_ELECTRIC_BUS` e `STCP_CHARGING_STATIONS`
+- 6 dispositivos recriados: BUS-001, BUS-002, BUS-003, CS-001, CS-002, CS-003
+- Exportação de dados configurada para o Event Hub com estado "healthy"
+
+Correcções aplicadas aos device templates nesta migração: campo `state` corrigido de `Sate` para `state` com schema `string` (estava com erro de digitação e tipo errado), campo `connectedBus` corrigido de `ConnectedBus` para `connectedBus` com schema `string`, campos `Latitude` e `Longitude` corrigidos para minúsculas. Estas correcções evitam que os campos cheguem a null no Databricks.
+
+**Event Hub recriado:**
+- Namespace: `ehns-stcp-bus`
+- Event Hub: `stcp-telemetry`
+- Tier: Standard
+- Retenção: 1 hora
+- Resource group: `mrg-dbw-neu-dev-iscap_master_thesis_Eletric_Fleet`
+
+**Databricks recriado:**
+- Workspace: `dbw-stcp-bus`
+- Cluster: `stcp-cluster` (Runtime 13.3 LTS, Single Node)
+- Unity Catalog activo
+- Resource group: `mrg-dbw-neu-dev-iscap_master_thesis_Eletric_Fleet`
+- 5 notebooks importados: STCP Dados Simulados, STCP Queries, STCP Business Rules, STCP Algoritmo de Decisão, STCP Simulação de Cenários
+
+**Pipeline testado e validado:**
+- Simulador Python ligou os 6 dispositivos com sucesso
+- Telemetria a chegar ao IoT Central
+- Event Hub a receber dados com estado healthy
+- Databricks a consumir o stream em tempo real
+- Tabelas Delta `bus_telemetry_raw` e `charger_telemetry_raw` a receber dados
+- Views `bus_telemetry` e `charger_telemetry` criadas com filtro de 2 minutos
+- Notebook de queries executado com sucesso
+
+**Exploração do Lakeflow Zerobus Ingest:**
+Foi explorado o Lakeflow Zerobus Ingest disponível no workspace. Verificou-se que o Zerobus Ingest é um SDK para envio directo de dados para tabelas Delta a partir de produtores externos, substituindo potencialmente o IoT Central e o Event Hub. Requer um Service Principal Azure para autenticação, que necessita de permissões de administrador na subscrição da BI4ALL. Ficou pendente para discussão com o formador.
 
 ---
 
@@ -284,35 +338,44 @@ O trabalho de migração está por iniciar.
 
 | Componente | Estado |
 |---|---|
-| Azure IoT Central configurado | Concluído (conta anterior) |
-| Azure Event Hub configurado | Concluído (conta anterior) |
-| Device templates actualizados | Concluído (conta anterior) |
+| Azure IoT Central configurado | Concluído (verbatim9898@proton.me) |
+| Azure Event Hub configurado | Concluído (resource group BI4ALL) |
+| Device templates corrigidos e importados | Concluído |
+| 6 dispositivos criados e autenticados | Concluído |
+| Exportação IoT Central para Event Hub | Concluído (estado healthy) |
 | Simulador Python - telemetria completa | Concluído |
 | Simulador Python - campo distanceTraveled | Concluído |
 | Simulador Python - estados realistas nas estações | Concluído |
-| Simulador Python - timeout de 60 segundos | Concluído |
-| Databricks - tabelas Delta a receber dados | Concluído (conta anterior) |
-| Databricks - tabela route_stops com dados GTFS | Concluído (conta anterior) |
-| Databricks - notebook de queries grupo 1 (Autocarros) | Concluído (conta anterior) |
-| Databricks - notebook de queries grupo 2 (Estações) | Concluído (conta anterior) |
-| Databricks - notebook de queries grupo 3 (Serviços) | Concluído (conta anterior) |
-| Databricks - notebook de queries grupo 4 (Combinadas) | Concluído (conta anterior) |
-| Resource group BI4ALL recebido | Concluído |
-| Migração da infraestrutura para resource group BI4ALL | Por iniciar |
+| Simulador Python - consumo acelerado 10x para demonstração | Concluído |
+| Databricks - workspace no resource group BI4ALL | Concluído |
+| Databricks - cluster stcp-cluster activo | Concluído |
+| Databricks - Unity Catalog activo | Concluído |
+| Databricks - tabelas Delta a receber dados em tempo real | Concluído |
+| Databricks - tabela route_stops com dados GTFS | Pendente (recriar no novo workspace) |
+| Databricks - notebook de queries grupo 1 (Autocarros) | Concluído |
+| Databricks - notebook de queries grupo 2 (Estações) | Concluído |
+| Databricks - notebook de queries grupo 3 (Serviços) | Concluído |
+| Databricks - notebook de queries grupo 4 (Combinadas) | Concluído |
+| Pipeline completo testado e validado | Concluído |
+| Lakeflow Zerobus Ingest | Pendente (requer Service Principal da BI4ALL) |
 
 ---
 
 ## 7. Passos Seguintes
 
-**Passo 1 - Migração para o resource group BI4ALL**
+**Passo 1 - Recriar tabela route_stops no novo workspace Databricks**
 
-Recriar toda a infraestrutura Azure dentro do resource group `mrg-dbw-neu-dev-iscap_master_thesis_Eletric_Fleet`: Databricks, Event Hub e IoT Central. Actualizar as credenciais no ficheiro `.env` do simulador Python.
+A tabela `route_stops` com os dados GTFS das 72 paragens das três linhas precisa de ser recriada no novo workspace `dbw-stcp-bus`. Esta tabela é necessária para as queries de localização dos autocarros nas rotas.
 
-**Passo 2 - Demonstração ao orientador**
+**Passo 2 - Lakeflow Zerobus Ingest**
+
+Falar com o formador para obter um Service Principal Azure com permissões na subscrição da BI4ALL. Com o Service Principal, é possível configurar o Zerobus Ingest para substituir o IoT Central e o Event Hub, enviando dados directamente do simulador Python para as tabelas Delta.
+
+**Passo 3 - Demonstração ao orientador**
 
 Com o simulador a correr no VS Code e o Databricks aberto, mostrar as queries dos 4 grupos a responder em tempo real.
 
-**Passo 3 - Melhorias futuras**
+**Passo 4 - Melhorias futuras**
 
 - Integração GPS real com as coordenadas das paragens GTFS (mover o autocarro de paragem em paragem em vez de movimento aleatório)
 - Substituição do simulador Python por APIs reais dos autocarros e estações da STCP
@@ -332,6 +395,10 @@ O Event Hub actua como buffer entre o IoT Central e o Databricks. Permite que o 
 **Porquê protocolo Kafka no Event Hub?**
 
 O Azure Event Hub é compatível com o protocolo Kafka, que é o protocolo nativo do Spark Streaming no Databricks. Esta compatibilidade elimina a necessidade de bibliotecas adicionais.
+
+**Porquê o Event Hub tem de ser Standard e não Basic?**
+
+O plano Basic não suporta o protocolo Kafka na porta 9093. O Databricks Spark Streaming usa Kafka para consumir dados do Event Hub. Com o plano Basic a ligação falha com erro de conectividade.
 
 **Porquê tabelas Delta e não simples tabelas Spark?**
 
@@ -357,13 +424,17 @@ Os horários e paragens são dados de referência fixos que nunca mudam. O Azure
 
 O BUS-004 existe apenas como valor no campo `connectedBus` da CS-001 para simular uma estação ocupada. Criar um dispositivo real no IoT Central seria desnecessário para o objectivo actual de demonstrar queries.
 
-**Porquê o timeout de 60 segundos?**
+**Porquê o consumo de bateria está acelerado 10x?**
 
-Permite correr o simulador por um período controlado sem necessidade de intervenção manual, útil para demonstrações.
+Para fins de demonstração. Com consumo real, a bateria levaria horas a descarregar visivelmente. Com aceleração 10x, é possível observar a descarga durante uma sessão curta de demonstração.
 
 **Porquê o orquestrador de carregamento foi removido?**
 
 O foco actual são as queries. O orquestrador adicionava complexidade e provocava mudanças de estado automáticas que dificultavam a demonstração. Os estados são definidos directamente no código com base no cenário do Excel.
+
+**Diferença entre device templates e devices no IoT Central:**
+
+Os device templates são moldes que definem os campos de telemetria e propriedades de um tipo de dispositivo. Os devices são as instâncias individuais, cada uma com a sua própria chave de autenticação gerada pelo DPS. Sem os templates o IoT Central não sabe que campos exportar; sem os devices o simulador não tem credenciais para se ligar. São dois passos obrigatórios e distintos na configuração.
 
 ---
 
