@@ -145,7 +145,7 @@ class ElectricBusSimulator:
             self.distance_traveled += distance_per_second * 1000
 
             # Consumo de energia baseado na distancia percorrida
-            energy_consumed = distance_per_second * self.avg_consumption / 3600
+            energy_consumed = distance_per_second * self.avg_consumption / 360
             self.battery_kwh = max(0, self.battery_kwh - energy_consumed)
             self.battery_level = (self.battery_kwh / self.battery_capacity) * 100
             self.instant_consumption = self.avg_consumption * 50

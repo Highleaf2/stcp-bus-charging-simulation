@@ -264,35 +264,55 @@ Adicionado o campo `distanceTraveled` à telemetria dos autocarros para rastrear
 
 Criada a tabela Delta estática `route_stops` no Databricks com os dados reais GTFS das três linhas (72 paragens no total). Esta tabela permite determinar em que paragem está cada autocarro e quantas paragens faltam para terminar a rota, cruzando o `distanceTraveled` em tempo real com as distâncias reais das paragens.
 
+### Fase 9 - Migração para Resource Group BI4ALL (Junho de 2026)
+
+A empresa BI4ALL forneceu um resource group dedicado para o projecto no âmbito do mestrado:
+
+- Nome do resource group: `mrg-dbw-neu-dev-iscap_master_thesis_Eletric_Fleet`
+- Subscrição: Microsoft Azure Sponsorship - BI4ALL - K&I - CoEs - Data
+- Subscription ID: `7791a09d-de4b-471d-9460-7265186677e8`
+- Localização: West Europe
+- Conta Azure: `2240115@iscap.ipp.pt`
+
+O resource group foi recebido vazio. Toda a infraestrutura anterior (IoT Central, Event Hub, Databricks) foi criada em contas pessoais de estudante que entretanto expiraram ou têm limitações. A migração consiste em recriar toda a infraestrutura dentro deste resource group e adaptar os simuladores Python com as novas credenciais.
+
+O trabalho de migração está por iniciar.
+
 ---
 
 ## 6. Estado Actual do Projecto
 
 | Componente | Estado |
 |---|---|
-| Azure IoT Central configurado | Concluído |
-| Azure Event Hub configurado | Concluído |
-| Device templates actualizados | Concluído |
+| Azure IoT Central configurado | Concluído (conta anterior) |
+| Azure Event Hub configurado | Concluído (conta anterior) |
+| Device templates actualizados | Concluído (conta anterior) |
 | Simulador Python - telemetria completa | Concluído |
 | Simulador Python - campo distanceTraveled | Concluído |
 | Simulador Python - estados realistas nas estações | Concluído |
 | Simulador Python - timeout de 60 segundos | Concluído |
-| Databricks - tabelas Delta a receber dados | Concluído |
-| Databricks - tabela route_stops com dados GTFS | Concluído |
-| Databricks - notebook de queries grupo 1 (Autocarros) | Concluído |
-| Databricks - notebook de queries grupo 2 (Estações) | Concluído |
-| Databricks - notebook de queries grupo 3 (Serviços) | Concluído |
-| Databricks - notebook de queries grupo 4 (Combinadas) | Concluído |
+| Databricks - tabelas Delta a receber dados | Concluído (conta anterior) |
+| Databricks - tabela route_stops com dados GTFS | Concluído (conta anterior) |
+| Databricks - notebook de queries grupo 1 (Autocarros) | Concluído (conta anterior) |
+| Databricks - notebook de queries grupo 2 (Estações) | Concluído (conta anterior) |
+| Databricks - notebook de queries grupo 3 (Serviços) | Concluído (conta anterior) |
+| Databricks - notebook de queries grupo 4 (Combinadas) | Concluído (conta anterior) |
+| Resource group BI4ALL recebido | Concluído |
+| Migração da infraestrutura para resource group BI4ALL | Por iniciar |
 
 ---
 
 ## 7. Passos Seguintes
 
-**Passo 1 - Demonstração ao orientador**
+**Passo 1 - Migração para o resource group BI4ALL**
+
+Recriar toda a infraestrutura Azure dentro do resource group `mrg-dbw-neu-dev-iscap_master_thesis_Eletric_Fleet`: Databricks, Event Hub e IoT Central. Actualizar as credenciais no ficheiro `.env` do simulador Python.
+
+**Passo 2 - Demonstração ao orientador**
 
 Com o simulador a correr no VS Code e o Databricks aberto, mostrar as queries dos 4 grupos a responder em tempo real.
 
-**Passo 2 - Melhorias futuras**
+**Passo 3 - Melhorias futuras**
 
 - Integração GPS real com as coordenadas das paragens GTFS (mover o autocarro de paragem em paragem em vez de movimento aleatório)
 - Substituição do simulador Python por APIs reais dos autocarros e estações da STCP
@@ -347,4 +367,4 @@ O foco actual são as queries. O orquestrador adicionava complexidade e provocav
 
 ---
 
-*Documento actualizado à medida que o trabalho avança. Última actualização: 30 de Março de 2026.*
+*Documento actualizado à medida que o trabalho avança. Última actualização: 5 de Junho de 2026.*
