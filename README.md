@@ -56,9 +56,11 @@ Nota importante: No futuro, esta camada sera substituida por APIs reais dos auto
 
 ### Camada 2 - Azure IoT Central
 
-Conta: verbatim9898@proton.me
-Aplicacao: STCP Bus Charging (stcp-bus-charging.azureiotcentral.com)
-ID Scope: 0ne011F5C22
+Conta: 2240115@iscap.ipp.pt (tenant BI4ALL)
+Aplicacao: iotc-stcp-bus (iotc-stcp-bus.azureiotcentral.com)
+ID Scope: 0ne0128409B
+
+Nota: a conta e a aplicacao foram migradas da conta pessoal verbatim9898@proton.me (usada ate a Fase 10) para a conta institucional 2240115@iscap.ipp.pt, no ambito do resource group dedicado fornecido pela BI4ALL (ver Fase 12).
 
 Funcao: Receber a telemetria de cada dispositivo, gerir a autenticacao via DPS, e exportar os dados em tempo real para o Event Hub. Apenas os campos definidos no device template de cada dispositivo sao exportados.
 
@@ -119,7 +121,7 @@ Especificacoes tecnicas (baseadas no CaetanoBus e.City Gold):
 | Nivel minimo de seguranca | 20% |
 | Nivel maximo de carregamento | 95% |
 | Faixa operacional ideal | 20% a 80% |
-| Potencia maxima de carregamento | 150 kW (DC CCS2) |
+| Potencia maxima de carregamento | 120 kW |
 
 Telemetria enviada por cada autocarro a cada 5 segundos:
 
@@ -157,7 +159,7 @@ A localizacao corresponde ao deposito da STCP na Rua de Bojoia, Campanha, Porto.
 
 O BUS-004 e um autocarro ficticio usado apenas para simular uma estacao ocupada. Nao existe como dispositivo no Azure IoT Central.
 
-Limite total da rede electrica: 300 kW (soma das tres estacoes em simultaneo)
+Limite total da rede electrica: 360 kW (soma das tres estacoes a 120 kW cada)
 
 Telemetria enviada por cada estacao a cada 5 segundos:
 
@@ -216,11 +218,13 @@ Estado available (CS-003): Sem potencia, temperatura desce para 22 graus Celsius
 
 ### 4.4 Tabela de Referencia das Paragens
 
-Foi criada no Databricks uma tabela Delta estatica chamada route_stops com os horarios e coordenadas reais das paragens das tres linhas, obtidos dos dados GTFS da STCP:
+Foi criada no Databricks uma tabela Delta estatica chamada route_stops com os horarios e coordenadas reais das paragens das tres linhas, obtidas da API publica da STCP (stcp.pt/api/route/{linha}/stops/direction):
 
-- Linha 200 (BUS-001): 30 paragens, Bolhao ate Castelo do Queijo, 9853,9 metros
-- Linha 201 (BUS-002): 26 paragens, Aliados ate Viso, 9777,63 metros
-- Linha 202 (BUS-003): 16 paragens, S. Joao de Brito ate Passeio Alegre, 5313,2 metros
+- Linha 200 (BUS-001): 30 paragens, Bolhao ate Castelo do Queijo, 8.640,2 metros
+- Linha 201 (BUS-002): 26 paragens, Aliados ate Viso, 8.389,7 metros
+- Linha 202 (BUS-003): 30 paragens, Av. Aliados ate Passeio Alegre, 9.482,3 metros
+
+Total: 86 paragens reais. Nota: a versao inicial desta tabela tinha apenas 72 paragens, porque faltavam as 14 primeiras paragens da Linha 202 (Av. Aliados ate Av. do Bessa) — corrigido na Fase 12.
 
 Esta tabela permite cruzar a distancia percorrida em tempo real com as paragens reais para determinar onde cada autocarro esta na rota.
 
@@ -364,13 +368,46 @@ Seguranca e limpeza do repositorio GitHub:
 - Removidas pastas __pycache__ e backup_old do tracking do Git com git rm --cached -r
 - Alteracoes committed e pushed para o repositorio GitHub
 
+### Fase 12 - Migracao final para a conta institucional e correcao das paragens (Outubro de 2026)
+
+Nova migracao de infraestrutura, desta vez da conta pessoal verbatim9898@proton.me para a conta institucional 2240115@iscap.ipp.pt (tenant BI4ALL), que passou a ser usada em todas as camadas (IoT Central, Event Hub, Databricks):
+
+- IoT Central recriado com a aplicacao iotc-stcp-bus (iotc-stcp-bus.azureiotcentral.com), ID Scope 0ne0128409B
+- Mantidos os 6 dispositivos (BUS-001/002/003, CS-001/002/003) e os dois device templates
+
+Correcao da tabela route_stops: a versao anterior tinha 72 paragens, incompleta para a Linha 202 (faltavam as 14 primeiras paragens, Av. Aliados ate Av. do Bessa). Foram obtidas as paragens completas das tres linhas directamente da API publica da STCP (stcp.pt/api/route/{linha}/stops/direction), totalizando 86 paragens reais (30 + 26 + 30). As distancias totais das rotas foram tambem corrigidas:
+- Linha 200: 8.640,2 metros (30 paragens)
+- Linha 201: 8.389,7 metros (26 paragens)
+- Linha 202: 9.482,3 metros (30 paragens, agora completa desde Av. Aliados)
+
+O simulador (electric_bus_simulator.py) e o ficheiro config.py foram actualizados para usar os nomes de rota reais (Route-200, Route-201, Route-202, em vez dos nomes placeholder Route-700/800/900 de versoes anteriores).
+
+### Fase 13 - Consolidacao dos notebooks finais e resultados da dissertacao (Outubro de 2026)
+
+Os cinco notebooks foram consolidados nas versoes _FINAL, usadas directamente para gerar os resultados reportados na dissertacao (Capitulo IV):
+- 1 - STCP_Dados_Simulados_FINAL.ipynb (ingestao e streaming)
+- 1.1 - STCP Queries_FINAL.ipynb (17 queries operacionais em 4 grupos: Autocarros, Estacoes, Servicos, Combinadas)
+- 2_STCP_Business_Rules_FINAL.ipynb (8 regras de negocio)
+- 3 - STCP Algoritmo de Decisao_FINAL.ipynb (algoritmo de decisao em 7 fases + Fase 8 de alertas)
+- 4 - STCP Simulacao de Cenarios_FINAL.ipynb (6 cenarios controlados + sub-cenarios 6A/6B)
+
+As versoes anteriores destes notebooks foram preservadas nas pastas Old/ e Old Notebooks/, para manter o historico do trabalho.
+
+Resultados principais obtidos com dados reais de telemetria (600 eventos): latencia mediana de ingestao de 2 segundos (P95: 5 segundos). Na analise de custos, o Azure Cost Management reportou 0,00 euros para o Databricks no periodo analisado — mas este valor deve ser lido com cautela, por causa da latencia de reporte da facturacao de DBU; com os dados disponiveis, e o Event Hub que domina o custo real do projecto, por ser facturado de forma continua enquanto o namespace esta provisionado, ao contrario do cluster Databricks (Single Node, desligamento automatico ao fim de 10 minutos de inactividade).
+
+Nota sobre o Lakeflow Zerobus Ingest (explorado na Fase 10 como trabalho futuro): o Zerobus Ingest atingiu disponibilidade geral apenas em fevereiro de 2026, depois da implementacao deste projecto. Continua a ser uma alternativa valida ao par IoT Central + Event Hub a considerar no futuro, visto o Databricks ser o unico consumidor dos dados de telemetria.
+
+### Fase 14 - Sincronizacao final do repositorio GitHub (Novembro de 2026)
+
+O repositorio publico estava desactualizado: tinha ainda os notebooks anteriores aos _FINAL, e nao reflectia as alteracoes ao simulador Python feitas na Fase 12. Foi feito commit e push do estado final: notebooks _FINAL, pastas Old/Old Notebooks preservadas, exports dos dashboards Lakeview, tabela route_stops e as alteracoes a electric_bus_simulator.py, config.py, charging_station_simulator.py e main.py.
+
 ---
 
 ## 6. Estado Actual do Projecto
 
 | Componente | Estado |
 |---|---|
-| Azure IoT Central configurado | Concluido (verbatim9898@proton.me) |
+| Azure IoT Central configurado | Concluido (2240115@iscap.ipp.pt, tenant BI4ALL) |
 | Azure Event Hub configurado | Concluido (resource group BI4ALL) |
 | Device templates corrigidos e importados | Concluido |
 | 6 dispositivos criados e autenticados | Concluido |
@@ -383,34 +420,47 @@ Seguranca e limpeza do repositorio GitHub:
 | Databricks - cluster stcp-cluster activo | Concluido |
 | Databricks - Unity Catalog activo | Concluido |
 | Databricks - tabelas Delta a receber dados em tempo real | Concluido |
-| Databricks - tabela route_stops com dados GTFS | Pendente (recriar no novo workspace) |
+| Databricks - tabela route_stops com dados reais (86 paragens) | Concluido |
 | Databricks - notebook de queries grupo 1 (Autocarros) | Concluido |
 | Databricks - notebook de queries grupo 2 (Estacoes) | Concluido |
 | Databricks - notebook de queries grupo 3 (Servicos) | Concluido |
 | Databricks - notebook de queries grupo 4 (Combinadas) | Concluido |
-| Pipeline completo testado e validado | Concluido |
+| Notebook de regras de negocio (8 regras) | Concluido |
+| Notebook de algoritmo de decisao (7 fases + Fase 8 alertas) | Concluido |
+| Notebook de simulacao de cenarios (6 cenarios + 6A/6B) | Concluido |
+| Pipeline completo testado e validado com dados reais | Concluido |
+| Analise de custos e sensibilidade a frequencia de telemetria | Concluido |
+| Resultados reportados na dissertacao (Capitulo IV) | Concluido |
+| Dissertacao submetida e aprovada pela orientadora | Concluido |
+| Repositorio GitHub sincronizado com a versao final | Concluido |
 | Service Principal obtido | Concluido |
-| Lakeflow Zerobus Ingest configurado | Pendente |
+| Lakeflow Zerobus Ingest configurado | Pendente (trabalho futuro — atingiu disponibilidade geral so depois deste projecto) |
 
 ---
 
 ## 7. Passos Seguintes
 
-### Passo 1 - Configurar Lakeflow Zerobus Ingest
+O trabalho principal esta concluido: a dissertacao foi submetida e aprovada pela orientadora, e os resultados do Capitulo IV foram todos obtidos com dados reais de telemetria. Os passos seguintes dizem respeito a defesa e a trabalho futuro identificado no Capitulo V.
 
-Com o Service Principal obtido (Client ID: 73fc4958-0752-45a3-a153-187def960d20), configurar o Lakeflow Zerobus Ingest no workspace dbw-stcp-bus para envio directo de dados do simulador Python para as tabelas Delta, substituindo o IoT Central e o Event Hub.
+### Passo 1 - Preparacao da defesa
 
-### Passo 2 - Recriar tabela route_stops no novo workspace Databricks
+Ensaiar a apresentacao (20 minutos), preparar respostas a perguntas provaveis, e gravar um video curto do simulador a correr com os dados a chegar ao Databricks em tempo real.
 
-A tabela route_stops com os dados GTFS das 72 paragens das tres linhas precisa de ser recriada no workspace dbw-stcp-bus. Esta tabela e necessaria para as queries de localizacao dos autocarros nas rotas.
+### Passo 2 - Resolver as tensoes entre regras de negocio
 
-### Passo 3 - Demonstracao ao orientador
+Unificar os criterios de avaliacao do estado da rede (RN-07) e da disponibilidade de estacoes (Notebook 1.1), e ajustar a formula do indicador de pressao da frota (Π) para distinguir explicitamente zero estacoes disponiveis de uma estacao disponivel.
 
-Com o simulador a correr no VS Code e o Databricks aberto, mostrar as queries dos 4 grupos a responder em tempo real.
+### Passo 3 - Avaliar o Lakeflow Zerobus Ingest
 
-### Passo 4 - Melhorias futuras
+Com o Service Principal ja obtido (Client ID: 73fc4958-0752-45a3-a153-187def960d20), avaliar o Zerobus Ingest (disponibilidade geral desde fevereiro de 2026) como alternativa directa ao par IoT Central + Event Hub, eliminando o componente que actualmente domina o custo real da solucao.
 
-- Integracao GPS real com as coordenadas das paragens GTFS (mover o autocarro de paragem em paragem em vez de movimento aleatorio)
+### Passo 4 - Melhorias futuras identificadas no Capitulo V
+
+- Implementar um canal de notificacao real (Azure Logic Apps ou Databricks Workflows) sobre a tabela alertas_operacionais
+- Validacao quantitativa da escalabilidade, latencia e custo a escala de uma frota de producao (126 veiculos)
+- Comparacao empirica entre as regras de negocio pontuadas e modelos de optimizacao formal da literatura
+- Mecanismo de prioridade absoluta para veiculos externos a frota normal (ex: reforcos de emergencia)
+- Visualizacao geografica no dashboard (Azure Maps ou Kepler.gl) e actualizacao autonoma agendada
 - Substituicao do simulador Python por APIs reais dos autocarros e estacoes da STCP
 
 ---
@@ -477,6 +527,10 @@ Porque as tabelas Delta sao nomeadas com sufixo _raw e existe uma view separada?
 
 As tabelas _raw guardam todos os dados recebidos, incluindo mensagens antigas que ficam retidas no Event Hub. As views filtram apenas os ultimos 5 minutos, garantindo que as queries operacionais mostram sempre o estado actual e nao dados antigos.
 
+Porque e que o Databricks aparece com custo 0,00 euros, se e a plataforma central do sistema?
+
+Porque o cluster Single Node se desliga automaticamente ao fim de 10 minutos de inactividade, e a facturacao de DBU no Azure Cost Management tem uma latencia de reporte tipica — o valor deve ser lido com cautela, nao significa necessariamente custo zero real. Com os dados disponiveis, e na verdade o Event Hub que domina o custo total do projecto, por ser facturado de forma continua enquanto o namespace estiver provisionado, ao contrario do cluster Databricks.
+
 ---
 
-Documento actualizado a medida que o trabalho avanca. Ultima actualizacao: 1 de Setembro de 2026.
+Documento actualizado a medida que o trabalho avanca. Ultima actualizacao: 24 de Novembro de 2026 (apos a submissao e aprovacao da dissertacao, em preparacao para a defesa).
