@@ -1,0 +1,901 @@
+{
+  "datasets": [
+    {
+      "name": "0e29d4ea",
+      "displayName": "painel1_frota",
+      "queryLines": [
+        "SELECT\r\n",
+        "    SUM(CASE WHEN state = 'inTransit' THEN 1 ELSE 0 END) AS em_transito,\r\n",
+        "    SUM(CASE WHEN state = 'charging' THEN 1 ELSE 0 END) AS em_carregamento,\r\n",
+        "    SUM(CASE WHEN state IN ('parked','waitingForCharger') THEN 1 ELSE 0 END) AS inativo,\r\n",
+        "    SUM(CASE WHEN batteryLevel < 20 THEN 1 ELSE 0 END) AS bateria_critica\r\n",
+        "FROM bus_telemetry_raw"
+      ]
+    },
+    {
+      "name": "208f2607",
+      "displayName": "painel1_estacoes",
+      "queryLines": [
+        "SELECT\r\n",
+        "    SUM(CASE WHEN state = 'available' THEN 1 ELSE 0 END) AS estacoes_disponiveis,\r\n",
+        "    SUM(CASE WHEN state = 'occupied' THEN 1 ELSE 0 END) AS estacoes_ocupadas,\r\n",
+        "    SUM(CASE WHEN state = 'fault' THEN 1 ELSE 0 END) AS estacoes_avaria,\r\n",
+        "    ROUND(SUM(currentPower), 1) AS carga_total_kw,\r\n",
+        "    360.0 AS limite_rede_kw\r\n",
+        "FROM charger_telemetry_raw"
+      ]
+    },
+    {
+      "name": "painel2_autocarros",
+      "displayName": "painel2_autocarros",
+      "queryLines": [
+        "SELECT\n",
+        "  device_id AS Identificador,\n",
+        "  currentStop AS Paragem_atual,\n",
+        "  ROUND(batteryLevel, 1) AS Bateria_pct,\n",
+        "  ROUND(batteryKwh, 1) AS Bateria_kWh,\n",
+        "  ROUND(batteryTemperature, 1) AS Temperatura,\n",
+        "  nextStop AS Proxima_paragem,\n",
+        "  state AS Estado,\n",
+        "  ROUND(batteryKwh / 1.2, 1) AS Autonomia_km,\n",
+        "  CASE\n",
+        "    WHEN\n",
+        "      batteryLevel < 20\n",
+        "      OR batteryTemperature > 35\n",
+        "    THEN\n",
+        "      'CRITICO'\n",
+        "    WHEN batteryLevel BETWEEN 20 AND 30 THEN 'ATENCAO'\n",
+        "    ELSE 'NORMAL'\n",
+        "  END AS cor_linha\n",
+        "FROM\n",
+        "  bus_telemetry\n",
+        "ORDER BY\n",
+        "  device_id"
+      ],
+      "catalog": "dbw_stcp_bus",
+      "schema": "default"
+    },
+    {
+      "name": "painel3_estacoes",
+      "displayName": "painel3_estacoes",
+      "queryLines": [
+        "SELECT\n",
+        "  device_id AS Identificador,\n",
+        "  state AS Estado,\n",
+        "  connectedBus AS Autocarro_em_carga,\n",
+        "  ROUND(currentPower, 1) AS Potencia_kW,\n",
+        "  ROUND(chargerTemperature, 1) AS Temperatura,\n",
+        "  CASE\n",
+        "    WHEN state = 'fault' THEN 'EM AVARIA — requer atenção'\n",
+        "    ELSE ''\n",
+        "  END AS alerta\n",
+        "FROM\n",
+        "  charger_telemetry\n",
+        "ORDER BY\n",
+        "  device_id"
+      ],
+      "catalog": "dbw_stcp_bus",
+      "schema": "default"
+    },
+    {
+      "name": "painel4_recomendacoes",
+      "displayName": "painel4_recomendacoes",
+      "queryLines": [
+        "SELECT\n",
+        "  device_id AS autocarro,\n",
+        "  nome_rota,\n",
+        "  prioridade,\n",
+        "  ROUND(soc_actual, 1) AS bateria_actual_pct,\n",
+        "  ROUND(delta_soc, 1) AS deficit_pct,\n",
+        "  score_total,\n",
+        "  COALESCE(estacao_id, 'EM FILA') AS estacao,\n",
+        "  ROUND(potencia_final_kw, 0) AS potencia_kw,\n",
+        "  ROUND(tempo_carga_min, 0) AS tempo_estimado_min,\n",
+        "  paragens_restantes,\n",
+        "  ROUND(soc_previsto_chegada, 1) AS soc_previsto_deposito_pct,\n",
+        "  CASE\n",
+        "    WHEN\n",
+        "      estacao_id IS NOT NULL\n",
+        "      AND potencia_final_kw > 0\n",
+        "    THEN\n",
+        "      CONCAT('CARREGAR AGORA em ', estacao_id, ' a ', ROUND(potencia_final_kw, 0), ' kW')\n",
+        "    WHEN estacao_id IS NULL THEN 'AGUARDAR — sem estação disponível'\n",
+        "    ELSE 'VERIFICAR'\n",
+        "  END AS acao,\n",
+        "  CONCAT(\n",
+        "    CASE\n",
+        "      WHEN score_total >= 160 THEN 'EMERGÊNCIA'\n",
+        "      WHEN score_total >= 100 THEN 'URGENTE'\n",
+        "      ELSE 'PRIORITÁRIO'\n",
+        "    END,\n",
+        "    ' | ',\n",
+        "    'Défice: ',\n",
+        "    ROUND(delta_soc, 1),\n",
+        "    '% | ',\n",
+        "    'Score: ',\n",
+        "    score_total,\n",
+        "    ' pts | ',\n",
+        "    nome_rota\n",
+        "  ) AS razao\n",
+        "FROM\n",
+        "  decisoes_carregamento\n",
+        "ORDER BY\n",
+        "  score_total DESC"
+      ]
+    },
+    {
+      "name": "painel1_carga_rede",
+      "displayName": "painel1_carga_rede",
+      "queryLines": [
+        "SELECT\n",
+        "  'Carga Total (kW)' AS metrica,\n",
+        "  ROUND(SUM(currentPower), 1) AS valor_kw\n",
+        "FROM\n",
+        "  charger_telemetry_raw\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  'Limite Rede (kW)',\n",
+        "  360.0\n",
+        "FROM\n",
+        "  charger_telemetry_raw\n",
+        "LIMIT 1"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "ad18a124",
+      "displayName": "Untitled page",
+      "layout": [
+        {
+          "widget": {
+            "name": "titulo_p1",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Painel 1 — Resumo executivo da frota"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "titulo_p2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Painel 2 — Estado individual dos autocarros"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "painel2_autocarros",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "painel2_autocarros",
+                  "fields": [
+                    {
+                      "name": "Identificador",
+                      "expression": "`Identificador`"
+                    },
+                    {
+                      "name": "Paragem_atual",
+                      "expression": "`Paragem_atual`"
+                    },
+                    {
+                      "name": "Bateria_pct",
+                      "expression": "`Bateria_pct`"
+                    },
+                    {
+                      "name": "Bateria_kWh",
+                      "expression": "`Bateria_kWh`"
+                    },
+                    {
+                      "name": "Temperatura",
+                      "expression": "`Temperatura`"
+                    },
+                    {
+                      "name": "Proxima_paragem",
+                      "expression": "`Proxima_paragem`"
+                    },
+                    {
+                      "name": "Estado",
+                      "expression": "`Estado`"
+                    },
+                    {
+                      "name": "Autonomia_km",
+                      "expression": "`Autonomia_km`"
+                    },
+                    {
+                      "name": "cor_linha",
+                      "expression": "`cor_linha`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "painel2_autocarros"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Identificador"
+                  },
+                  {
+                    "fieldName": "Paragem_atual"
+                  },
+                  {
+                    "fieldName": "Bateria_pct"
+                  },
+                  {
+                    "fieldName": "Bateria_kWh"
+                  },
+                  {
+                    "fieldName": "Temperatura"
+                  },
+                  {
+                    "fieldName": "Proxima_paragem"
+                  },
+                  {
+                    "fieldName": "Estado"
+                  },
+                  {
+                    "fieldName": "Autonomia_km"
+                  },
+                  {
+                    "fieldName": "cor_linha"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "titulo_p3",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Painel 3 — Estado das estações de carregamento"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "painel3_estacoes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "painel3_estacoes",
+                  "fields": [
+                    {
+                      "name": "Identificador",
+                      "expression": "`Identificador`"
+                    },
+                    {
+                      "name": "Estado",
+                      "expression": "`Estado`"
+                    },
+                    {
+                      "name": "Autocarro_em_carga",
+                      "expression": "`Autocarro_em_carga`"
+                    },
+                    {
+                      "name": "Potencia_kW",
+                      "expression": "`Potencia_kW`"
+                    },
+                    {
+                      "name": "Temperatura",
+                      "expression": "`Temperatura`"
+                    },
+                    {
+                      "name": "alerta",
+                      "expression": "`alerta`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": {
+                  "value": "painel3\\_estacoes",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Identificador"
+                  },
+                  {
+                    "fieldName": "Estado"
+                  },
+                  {
+                    "fieldName": "Autocarro_em_carga"
+                  },
+                  {
+                    "fieldName": "Potencia_kW"
+                  },
+                  {
+                    "fieldName": "Temperatura"
+                  },
+                  {
+                    "fieldName": "alerta"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_em_transito",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "0e29d4ea",
+                  "fields": [
+                    {
+                      "name": "sum(em_transito)",
+                      "expression": "SUM(`em_transito`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Em Trânsito"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(em_transito)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_em_carregamento",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "0e29d4ea",
+                  "fields": [
+                    {
+                      "name": "sum(em_carregamento)",
+                      "expression": "SUM(`em_carregamento`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Em Carregamento"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(em_carregamento)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_inativo",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "0e29d4ea",
+                  "fields": [
+                    {
+                      "name": "sum(inativo)",
+                      "expression": "SUM(`inativo`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Inativos"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(inativo)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_bateria_critica",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "0e29d4ea",
+                  "fields": [
+                    {
+                      "name": "sum(bateria_critica)",
+                      "expression": "SUM(`bateria_critica`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Bateria Crítica"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(bateria_critica)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_est_disponiveis",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "208f2607",
+                  "fields": [
+                    {
+                      "name": "sum(estacoes_disponiveis)",
+                      "expression": "SUM(`estacoes_disponiveis`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Estações Disponíveis"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(estacoes_disponiveis)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_est_ocupadas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "208f2607",
+                  "fields": [
+                    {
+                      "name": "sum(estacoes_ocupadas)",
+                      "expression": "SUM(`estacoes_ocupadas`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Estações Ocupadas"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(estacoes_ocupadas)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_est_avaria",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "208f2607",
+                  "fields": [
+                    {
+                      "name": "sum(estacoes_avaria)",
+                      "expression": "SUM(`estacoes_avaria`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Estações em Avaria"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(estacoes_avaria)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "titulo_p4",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Painel 4 — Recomendações do algoritmo de decisão"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 27,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "painel4_tabela",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "painel4_recomendacoes",
+                  "fields": [
+                    {
+                      "name": "autocarro",
+                      "expression": "`autocarro`"
+                    },
+                    {
+                      "name": "nome_rota",
+                      "expression": "`nome_rota`"
+                    },
+                    {
+                      "name": "prioridade",
+                      "expression": "`prioridade`"
+                    },
+                    {
+                      "name": "bateria_actual_pct",
+                      "expression": "`bateria_actual_pct`"
+                    },
+                    {
+                      "name": "deficit_pct",
+                      "expression": "`deficit_pct`"
+                    },
+                    {
+                      "name": "score_total",
+                      "expression": "`score_total`"
+                    },
+                    {
+                      "name": "estacao",
+                      "expression": "`estacao`"
+                    },
+                    {
+                      "name": "potencia_kw",
+                      "expression": "`potencia_kw`"
+                    },
+                    {
+                      "name": "tempo_estimado_min",
+                      "expression": "`tempo_estimado_min`"
+                    },
+                    {
+                      "name": "paragens_restantes",
+                      "expression": "`paragens_restantes`"
+                    },
+                    {
+                      "name": "soc_previsto_deposito_pct",
+                      "expression": "`soc_previsto_deposito_pct`"
+                    },
+                    {
+                      "name": "acao",
+                      "expression": "`acao`"
+                    },
+                    {
+                      "name": "razao",
+                      "expression": "`razao`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "painel4_recomendacoes"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "autocarro"
+                  },
+                  {
+                    "fieldName": "nome_rota"
+                  },
+                  {
+                    "fieldName": "prioridade"
+                  },
+                  {
+                    "fieldName": "bateria_actual_pct"
+                  },
+                  {
+                    "fieldName": "deficit_pct"
+                  },
+                  {
+                    "fieldName": "score_total"
+                  },
+                  {
+                    "fieldName": "estacao"
+                  },
+                  {
+                    "fieldName": "potencia_kw"
+                  },
+                  {
+                    "fieldName": "tempo_estimado_min"
+                  },
+                  {
+                    "fieldName": "paragens_restantes"
+                  },
+                  {
+                    "fieldName": "soc_previsto_deposito_pct"
+                  },
+                  {
+                    "fieldName": "acao"
+                  },
+                  {
+                    "fieldName": "razao"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_carga_rede",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "painel1_carga_rede",
+                  "fields": [
+                    {
+                      "name": "metrica",
+                      "expression": "`metrica`"
+                    },
+                    {
+                      "name": "sum(valor_kw)",
+                      "expression": "SUM(`valor_kw`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Carga vs Limite da Rede"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "metrica",
+                  "displayName": "metrica",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(valor_kw)",
+                  "displayName": "valor_kw",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "metrica",
+                  "displayName": "metrica",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 4
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

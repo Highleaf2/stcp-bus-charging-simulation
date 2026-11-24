@@ -24,19 +24,19 @@ ELECTRIC_BUSES = {
     "BUS-001": {
         "device_id": "BUS-001",
         "primary_key": os.getenv("BUS_001_KEY", "your-key-here"),
-        "route": "Route-700",
+        "route": "Route-200",
         "departure_time": "08:30"
     },
     "BUS-002": {
         "device_id": "BUS-002",
         "primary_key": os.getenv("BUS_002_KEY", "your-key-here"),
-        "route": "Route-800",
+        "route": "Route-201",
         "departure_time": "09:00"
     },
     "BUS-003": {
         "device_id": "BUS-003",
         "primary_key": os.getenv("BUS_003_KEY", "your-key-here"),
-        "route": "Route-900",
+        "route": "Route-202",
         "departure_time": "07:45"
     }
 }

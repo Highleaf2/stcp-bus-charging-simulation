@@ -1,0 +1,524 @@
+{
+ "Route-200": [
+  {
+   "name": "Bolhão",
+   "distance": 0.0,
+   "lat": 41.151966,
+   "lon": -8.607095
+  },
+  {
+   "name": "Mercado do Bolhão",
+   "distance": 275.5,
+   "lat": 41.149509,
+   "lon": -8.607564
+  },
+  {
+   "name": "Pr. D. João I",
+   "distance": 526.4,
+   "lat": 41.147578,
+   "lon": -8.609125
+  },
+  {
+   "name": "Pr. Filipa Lencastre",
+   "distance": 843.4,
+   "lat": 41.148299,
+   "lon": -8.612795
+  },
+  {
+   "name": "Guil. G. Fernandes",
+   "distance": 1027.6,
+   "lat": 41.14756,
+   "lon": -8.614767
+  },
+  {
+   "name": "Carmo",
+   "distance": 1210.6,
+   "lat": 41.147221,
+   "lon": -8.61691
+  },
+  {
+   "name": "Hosp. St. António",
+   "distance": 1677.6,
+   "lat": 41.147766,
+   "lon": -8.62245
+  },
+  {
+   "name": "Palácio",
+   "distance": 1971.2,
+   "lat": 41.149145,
+   "lon": -8.625447
+  },
+  {
+   "name": "Pr. da Galiza",
+   "distance": 2369.9,
+   "lat": 41.152531,
+   "lon": -8.627041
+  },
+  {
+   "name": "Junta Massarelos",
+   "distance": 2719.8,
+   "lat": 41.152694,
+   "lon": -8.631221
+  },
+  {
+   "name": "Gólgota",
+   "distance": 2926.5,
+   "lat": 41.152639,
+   "lon": -8.633694
+  },
+  {
+   "name": "Planetário",
+   "distance": 3313.9,
+   "lat": 41.153094,
+   "lon": -8.638289
+  },
+  {
+   "name": "Faculdade de Ciências",
+   "distance": 3579.5,
+   "lat": 41.153838,
+   "lon": -8.641309
+  },
+  {
+   "name": "Jardim Botânico",
+   "distance": 3834.7,
+   "lat": 41.154528,
+   "lon": -8.644222
+  },
+  {
+   "name": "Lordelo",
+   "distance": 4236.6,
+   "lat": 41.154389,
+   "lon": -8.649028
+  },
+  {
+   "name": "Palmeiras",
+   "distance": 4578.9,
+   "lat": 41.152356,
+   "lon": -8.652107
+  },
+  {
+   "name": "Fluvial (Norte)",
+   "distance": 4838.0,
+   "lat": 41.152139,
+   "lon": -8.655194
+  },
+  {
+   "name": "Paulo da Gama",
+   "distance": 5164.4,
+   "lat": 41.150856,
+   "lon": -8.658707
+  },
+  {
+   "name": "Pasteleira",
+   "distance": 5400.4,
+   "lat": 41.150486,
+   "lon": -8.661488
+  },
+  {
+   "name": "Torres",
+   "distance": 5663.7,
+   "lat": 41.150749,
+   "lon": -8.664619
+  },
+  {
+   "name": "Padre Luis Cabral",
+   "distance": 5974.0,
+   "lat": 41.151806,
+   "lon": -8.668056
+  },
+  {
+   "name": "Univ. Católica",
+   "distance": 6280.8,
+   "lat": 41.153538,
+   "lon": -8.670916
+  },
+  {
+   "name": "Mercado da Foz",
+   "distance": 6543.9,
+   "lat": 41.155048,
+   "lon": -8.673343
+  },
+  {
+   "name": "Pr. de Liége",
+   "distance": 6863.6,
+   "lat": 41.155089,
+   "lon": -8.677168
+  },
+  {
+   "name": "Crasto",
+   "distance": 7226.9,
+   "lat": 41.157713,
+   "lon": -8.679766
+  },
+  {
+   "name": "Molhe",
+   "distance": 7514.9,
+   "lat": 41.15988,
+   "lon": -8.68166
+  },
+  {
+   "name": "Funchal",
+   "distance": 7912.8,
+   "lat": 41.16319,
+   "lon": -8.68349
+  },
+  {
+   "name": "Homem do Leme",
+   "distance": 8121.7,
+   "lat": 41.163454,
+   "lon": -8.685965
+  },
+  {
+   "name": "Timor",
+   "distance": 8379.0,
+   "lat": 41.165587,
+   "lon": -8.68717
+  },
+  {
+   "name": "Castelo do Queijo",
+   "distance": 8640.2,
+   "lat": 41.167422,
+   "lon": -8.689127
+  }
+ ],
+ "Route-201": [
+  {
+   "name": "Av. Aliados",
+   "distance": 0.0,
+   "lat": 41.147208,
+   "lon": -8.610983
+  },
+  {
+   "name": "Trindade",
+   "distance": 424.7,
+   "lat": 41.151033,
+   "lon": -8.610854
+  },
+  {
+   "name": "Pr. Filipa Lencastre",
+   "distance": 768.8,
+   "lat": 41.148299,
+   "lon": -8.612795
+  },
+  {
+   "name": "Guil. G. Fernandes",
+   "distance": 952.9,
+   "lat": 41.14756,
+   "lon": -8.614767
+  },
+  {
+   "name": "Carmo",
+   "distance": 1136.0,
+   "lat": 41.147221,
+   "lon": -8.61691
+  },
+  {
+   "name": "Hosp. St. António",
+   "distance": 1602.9,
+   "lat": 41.147766,
+   "lon": -8.62245
+  },
+  {
+   "name": "Palácio",
+   "distance": 1925.3,
+   "lat": 41.149512,
+   "lon": -8.625532
+  },
+  {
+   "name": "Pr. da Galiza",
+   "distance": 2366.9,
+   "lat": 41.153444,
+   "lon": -8.626333
+  },
+  {
+   "name": "Boavista - B.Sucesso",
+   "distance": 2721.4,
+   "lat": 41.156403,
+   "lon": -8.62793
+  },
+  {
+   "name": "Boavista-Casa da Música",
+   "distance": 3030.3,
+   "lat": 41.15895,
+   "lon": -8.62942
+  },
+  {
+   "name": "Agramonte",
+   "distance": 3462.8,
+   "lat": 41.158948,
+   "lon": -8.634595
+  },
+  {
+   "name": "António Cardoso",
+   "distance": 3918.6,
+   "lat": 41.159843,
+   "lon": -8.639918
+  },
+  {
+   "name": "Bessa",
+   "distance": 4272.8,
+   "lat": 41.16052,
+   "lon": -8.64406
+  },
+  {
+   "name": "Foco",
+   "distance": 4563.9,
+   "lat": 41.16109,
+   "lon": -8.64746
+  },
+  {
+   "name": "Pinheiro Manso",
+   "distance": 4946.5,
+   "lat": 41.161845,
+   "lon": -8.651927
+  },
+  {
+   "name": "Serralves",
+   "distance": 5462.3,
+   "lat": 41.162848,
+   "lon": -8.657954
+  },
+  {
+   "name": "Paulo Novais",
+   "distance": 5642.3,
+   "lat": 41.1632,
+   "lon": -8.660057
+  },
+  {
+   "name": "Fonte da Moura",
+   "distance": 5869.1,
+   "lat": 41.164505,
+   "lon": -8.662144
+  },
+  {
+   "name": "Bairro Vilarinha",
+   "distance": 6205.4,
+   "lat": 41.167065,
+   "lon": -8.65999
+  },
+  {
+   "name": "Lidador",
+   "distance": 6564.9,
+   "lat": 41.169798,
+   "lon": -8.657682
+  },
+  {
+   "name": "Pereiró",
+   "distance": 6903.6,
+   "lat": 41.172368,
+   "lon": -8.655497
+  },
+  {
+   "name": "Ezequiel Campos",
+   "distance": 7174.9,
+   "lat": 41.174449,
+   "lon": -8.653793
+  },
+  {
+   "name": "Man.P.Azevedo 3",
+   "distance": 7500.9,
+   "lat": 41.176989,
+   "lon": -8.651836
+  },
+  {
+   "name": "IMTT",
+   "distance": 7804.0,
+   "lat": 41.178485,
+   "lon": -8.648801
+  },
+  {
+   "name": "Viso (Metro)",
+   "distance": 8033.1,
+   "lat": 41.177361,
+   "lon": -8.6465
+  },
+  {
+   "name": "Viso",
+   "distance": 8389.7,
+   "lat": 41.17784,
+   "lon": -8.64228
+  }
+ ],
+ "Route-202": [
+  {
+   "name": "Av.Aliados",
+   "distance": 0.0,
+   "lat": 41.148528,
+   "lon": -8.610667
+  },
+  {
+   "name": "Trindade",
+   "distance": 362.9,
+   "lat": 41.151695,
+   "lon": -8.609587
+  },
+  {
+   "name": "Gonçalo Cristóvão",
+   "distance": 640.3,
+   "lat": 41.154194,
+   "lon": -8.609611
+  },
+  {
+   "name": "Pr. da República",
+   "distance": 834.0,
+   "lat": 41.154023,
+   "lon": -8.611917
+  },
+  {
+   "name": "Figueiroa",
+   "distance": 1299.2,
+   "lat": 41.155956,
+   "lon": -8.616856
+  },
+  {
+   "name": "Carvalhosa",
+   "distance": 1582.6,
+   "lat": 41.156512,
+   "lon": -8.620165
+  },
+  {
+   "name": "Hospital Militar",
+   "distance": 1929.2,
+   "lat": 41.157176,
+   "lon": -8.624218
+  },
+  {
+   "name": "Boavista Brasília",
+   "distance": 2139.3,
+   "lat": 41.157587,
+   "lon": -8.626672
+  },
+  {
+   "name": "Boavista-Casa da Música",
+   "distance": 2403.1,
+   "lat": 41.159458,
+   "lon": -8.628619
+  },
+  {
+   "name": "Graciosa",
+   "distance": 2798.7,
+   "lat": 41.162921,
+   "lon": -8.627502
+  },
+  {
+   "name": "Casa de Saúde da Boavista",
+   "distance": 3225.4,
+   "lat": 41.164532,
+   "lon": -8.632138
+  },
+  {
+   "name": "Sidónio Pais",
+   "distance": 3632.0,
+   "lat": 41.164563,
+   "lon": -8.637004
+  },
+  {
+   "name": "Av. do Bessa",
+   "distance": 4147.6,
+   "lat": 41.165323,
+   "lon": -8.643091
+  },
+  {
+   "name": "S.João Bosco",
+   "distance": 4554.6,
+   "lat": 41.166131,
+   "lon": -8.647841
+  },
+  {
+   "name": "S. João de Brito",
+   "distance": 4787.4,
+   "lat": 41.166494,
+   "lon": -8.650585
+  },
+  {
+   "name": "Alberto Macedo",
+   "distance": 5121.3,
+   "lat": 41.167151,
+   "lon": -8.654485
+  },
+  {
+   "name": "Bairro da Previdência",
+   "distance": 5426.6,
+   "lat": 41.165783,
+   "lon": -8.657654
+  },
+  {
+   "name": "Bairro da Vilarinha",
+   "distance": 5576.9,
+   "lat": 41.166094,
+   "lon": -8.659405
+  },
+  {
+   "name": "Fonte da Moura",
+   "distance": 5920.4,
+   "lat": 41.164191,
+   "lon": -8.662646
+  },
+  {
+   "name": "Av. da Boavista",
+   "distance": 6084.9,
+   "lat": 41.162823,
+   "lon": -8.663403
+  },
+  {
+   "name": "Liceu Garcia Orta",
+   "distance": 6401.4,
+   "lat": 41.161528,
+   "lon": -8.666778
+  },
+  {
+   "name": "R.Crasto",
+   "distance": 6815.6,
+   "lat": 41.162,
+   "lon": -8.671694
+  },
+  {
+   "name": "Lgo.Nevogilde",
+   "distance": 7211.9,
+   "lat": 41.162833,
+   "lon": -8.676306
+  },
+  {
+   "name": "Nevogilde",
+   "distance": 7496.9,
+   "lat": 41.161511,
+   "lon": -8.67923
+  },
+  {
+   "name": "Molhe",
+   "distance": 7859.9,
+   "lat": 41.160158,
+   "lon": -8.683185
+  },
+  {
+   "name": "Jacinto Nunes",
+   "distance": 8125.0,
+   "lat": 41.158107,
+   "lon": -8.68156
+  },
+  {
+   "name": "Crasto",
+   "distance": 8324.5,
+   "lat": 41.1566,
+   "lon": -8.68026
+  },
+  {
+   "name": "Praia dos Ingleses",
+   "distance": 8773.0,
+   "lat": 41.152767,
+   "lon": -8.678563
+  },
+  {
+   "name": "Praia do Ourigo",
+   "distance": 9208.5,
+   "lat": 41.149376,
+   "lon": -8.675942
+  },
+  {
+   "name": "Passeio Alegre",
+   "distance": 9482.3,
+   "lat": 41.14882,
+   "lon": -8.67275
+  }
+ ]
+}

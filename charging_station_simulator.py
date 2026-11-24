@@ -71,6 +71,18 @@ class ChargingStationSimulator:
         self.energy_delivered = config["energy_delivered"]
         self.current_efficiency = config["current_efficiency"]
         self.charging_start_time = datetime.utcnow().isoformat() if self.status == "occupied" else None
+        self.telemetry_count = 0
+
+        # [CORRIGIDO por Claude] CS-001 arrancava ocupada pelo BUS-004 (autocarro fictício,
+        # representa tráfego de outras linhas da STCP fora da nossa frota de 3) para sempre —
+        # nunca ficava livre para os autocarros reais. Agora liberta-se uma única vez, de
+        # forma realista, depois de entregar mais alguma energia; a partir daí fica
+        # disponível como qualquer outra estação para a nossa frota.
+        if self.connected_bus_id == "BUS-004":
+            self._phantom_release_energy = self.energy_delivered + random.uniform(10.0, 20.0)
+        else:
+            self._phantom_release_energy = None
+        self.should_release = False
 
     async def provision_device(self):
         provisioning_client = ProvisioningDeviceClient.create_from_symmetric_key(
@@ -126,6 +138,7 @@ class ChargingStationSimulator:
         message.content_encoding = "utf-8"
         try:
             await self.client.send_message(message)
+            self.telemetry_count += 1
         except Exception as e:
             print(f"Error sending telemetry: {e}")
     
@@ -136,6 +149,9 @@ class ChargingStationSimulator:
             energy_per_second = self.current_power / 3600
             self.energy_delivered += energy_per_second * 5
             self.current_efficiency = 92.0 + random.uniform(-1.0, 1.0)
+            if (self._phantom_release_energy is not None
+                    and self.energy_delivered >= self._phantom_release_energy):
+                self.should_release = True
 
         elif self.status == "available":
             # Estacao livre: temperatura desce para ambiente
@@ -163,16 +179,27 @@ class ChargingStationSimulator:
         self.connected_bus_id = None
         self.current_power = 0.0
         self.charging_start_time = None
+        self._phantom_release_energy = None
+        self.should_release = False
         await self.update_properties()
     
-    async def simulate(self):
-        while True:
+    async def simulate(self, stop_event):
+        """
+        Corre a simulacao ate ao stop_event ser activado
+        (quando um autocarro atinge o SOC minimo).
+        """
+        while not stop_event.is_set():
             try:
                 self.update_state()
+                if self.should_release:
+                    bus_leaving = self.connected_bus_id
+                    await self.stop_charging()
+                    print(f"\n  {bus_leaving} terminou carregamento em {self.device_id} "
+                          f"e seguiu para a sua rota.\n")
                 await self.send_telemetry()
                 await asyncio.sleep(5)
             except Exception as e:
-                print(f"Error in simulation: {e}")
+                print(f"Error in simulation ({self.device_id}): {e}")
                 await asyncio.sleep(5)
     
     async def disconnect(self):
